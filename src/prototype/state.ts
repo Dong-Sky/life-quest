@@ -2,17 +2,42 @@ import { calculateQuestReward } from "@/src/domain/rewards/calculate-quest-rewar
 import type { Difficulty, Importance, QuestReward, QuestType, Resistance } from "@/src/domain/rewards/types";
 
 export type QuestStatus = "open" | "completed";
+
 export interface PrototypeQuest {
-  id: string; title: string; questType: QuestType; difficulty: Difficulty;
-  importance: Importance; resistance: Resistance; status: QuestStatus;
-  reward?: QuestReward; completedAt?: string;
+  id: string;
+  title: string;
+  questType: QuestType;
+  difficulty: Difficulty;
+  importance: Importance;
+  resistance: Resistance;
+  status: QuestStatus;
+  reward?: QuestReward;
+  completedAt?: string;
 }
-export interface PrototypeState { quests: PrototypeQuest[]; totalXp: number; coinBalance: number; }
+
+export interface PrototypeTransaction {
+  id: string;
+  questId: string;
+  xpDelta: number;
+  coinDelta: number;
+  calculationVersion: string;
+  createdAt: string;
+}
+
+export interface PrototypeState {
+  quests: PrototypeQuest[];
+  totalXp: number;
+  coinBalance: number;
+  transactions: PrototypeTransaction[];
+}
+
 export const PROTOTYPE_KEY = "life-quest-prototype-v1";
 
 export function initialPrototypeState(): PrototypeState {
   return {
-    totalXp: 0, coinBalance: 0,
+    totalXp: 0,
+    coinBalance: 0,
+    transactions: [],
     quests: [
       { id: "starter-1", title: "明确本周最重要的成果", questType: "focus", difficulty: "standard", importance: "goal", resistance: "none", status: "open" },
       { id: "starter-2", title: "完成一次任务结算体验记录", questType: "standard", difficulty: "standard", importance: "helpful", resistance: "none", status: "open" },
@@ -20,24 +45,47 @@ export function initialPrototypeState(): PrototypeState {
     ],
   };
 }
+
 export function readPrototypeState(): PrototypeState {
   try {
     const stored = window.localStorage.getItem(PROTOTYPE_KEY);
-    return stored ? JSON.parse(stored) as PrototypeState : initialPrototypeState();
-  } catch { return initialPrototypeState(); }
+    if (!stored) return initialPrototypeState();
+    const parsed = JSON.parse(stored) as Partial<PrototypeState>;
+    return { ...initialPrototypeState(), ...parsed, transactions: parsed.transactions ?? [] };
+  } catch {
+    return initialPrototypeState();
+  }
 }
-export function writePrototypeState(state: PrototypeState) { window.localStorage.setItem(PROTOTYPE_KEY, JSON.stringify(state)); }
+
+export function writePrototypeState(state: PrototypeState) {
+  window.localStorage.setItem(PROTOTYPE_KEY, JSON.stringify(state));
+}
+
 export function createPrototypeQuest(state: PrototypeState, draft: Omit<PrototypeQuest, "id" | "status" | "reward" | "completedAt">): PrototypeState {
   const title = draft.title.trim();
   if (!title) return state;
   return { ...state, quests: [{ ...draft, title, id: crypto.randomUUID(), status: "open" }, ...state.quests] };
 }
+
 export function settlePrototypeQuest(state: PrototypeState, id: string): PrototypeState {
   const quest = state.quests.find((item) => item.id === id);
   if (!quest || quest.status === "completed") return state;
+
   const reward = calculateQuestReward(quest);
+  const createdAt = new Date().toISOString();
+  const transaction: PrototypeTransaction = {
+    id: crypto.randomUUID(),
+    questId: quest.id,
+    xpDelta: reward.xp,
+    coinDelta: reward.coins,
+    calculationVersion: reward.calculationVersion,
+    createdAt,
+  };
+
   return {
-    totalXp: state.totalXp + reward.xp, coinBalance: state.coinBalance + reward.coins,
-    quests: state.quests.map((item) => item.id === id ? { ...item, status: "completed", completedAt: new Date().toISOString(), reward } : item),
+    totalXp: state.totalXp + reward.xp,
+    coinBalance: state.coinBalance + reward.coins,
+    transactions: [transaction, ...state.transactions],
+    quests: state.quests.map((item) => item.id === id ? { ...item, status: "completed", completedAt: createdAt, reward } : item),
   };
 }
