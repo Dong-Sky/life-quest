@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getCycleKey } from "./recurrence";
-import { settlePrototypeQuest, type PrototypeState } from "./state";
+import { createPrototypeProject, settlePrototypeQuest, type PrototypeState } from "./state";
 
 function stateWithRecurringQuest(targetCount: number): PrototypeState {
   const cadence = targetCount === 1 ? "daily" : "weekly";
@@ -50,5 +50,24 @@ describe("recurring quest settlement", () => {
     expect(third.quests[0].status).toBe("completed");
     expect(third.transactions).toHaveLength(3);
     expect(fourth).toBe(third);
+  });
+});
+
+describe("project creation", () => {
+  it("stores a project with its success condition and target date", () => {
+    const next = createPrototypeProject(stateWithRecurringQuest(1), {
+      name: "12 周减脂计划",
+      victoryCondition: "完成全部训练与复盘",
+      mainlineId: "health",
+      dueDate: "2026-10-01",
+    });
+
+    expect(next.projects[0]).toMatchObject({
+      name: "12 周减脂计划",
+      victoryCondition: "完成全部训练与复盘",
+      mainlineId: "health",
+      dueDate: "2026-10-01",
+      status: "active",
+    });
   });
 });
