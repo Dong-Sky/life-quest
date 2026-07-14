@@ -2,6 +2,15 @@ import { calculateQuestReward } from "@/src/domain/rewards/calculate-quest-rewar
 import type { Difficulty, Importance, QuestReward, QuestType, Resistance } from "@/src/domain/rewards/types";
 
 export type QuestStatus = "open" | "completed";
+export type MainlineStatus = "active";
+
+export interface PrototypeMainline {
+  id: string;
+  name: string;
+  vision: string;
+  status: MainlineStatus;
+  createdAt: string;
+}
 
 export interface PrototypeQuest {
   id: string;
@@ -10,6 +19,7 @@ export interface PrototypeQuest {
   difficulty: Difficulty;
   importance: Importance;
   resistance: Resistance;
+  mainlineId?: string;
   status: QuestStatus;
   reward?: QuestReward;
   completedAt?: string;
@@ -25,6 +35,7 @@ export interface PrototypeTransaction {
 }
 
 export interface PrototypeState {
+  mainlines: PrototypeMainline[];
   quests: PrototypeQuest[];
   totalXp: number;
   coinBalance: number;
@@ -35,6 +46,7 @@ export const PROTOTYPE_KEY = "life-quest-prototype-v1";
 
 export function initialPrototypeState(): PrototypeState {
   return {
+    mainlines: [],
     totalXp: 0,
     coinBalance: 0,
     transactions: [],
@@ -50,8 +62,16 @@ export function readPrototypeState(): PrototypeState {
   try {
     const stored = window.localStorage.getItem(PROTOTYPE_KEY);
     if (!stored) return initialPrototypeState();
+
+    const initial = initialPrototypeState();
     const parsed = JSON.parse(stored) as Partial<PrototypeState>;
-    return { ...initialPrototypeState(), ...parsed, transactions: parsed.transactions ?? [] };
+    return {
+      ...initial,
+      ...parsed,
+      mainlines: parsed.mainlines ?? [],
+      quests: parsed.quests ?? initial.quests,
+      transactions: parsed.transactions ?? [],
+    };
   } catch {
     return initialPrototypeState();
   }
@@ -61,10 +81,30 @@ export function writePrototypeState(state: PrototypeState) {
   window.localStorage.setItem(PROTOTYPE_KEY, JSON.stringify(state));
 }
 
+export function createPrototypeMainline(state: PrototypeState, draft: Pick<PrototypeMainline, "name" | "vision">): PrototypeState {
+  const name = draft.name.trim();
+  if (!name) return state;
+
+  return {
+    ...state,
+    mainlines: [{
+      id: crypto.randomUUID(),
+      name,
+      vision: draft.vision.trim(),
+      status: "active",
+      createdAt: new Date().toISOString(),
+    }, ...state.mainlines],
+  };
+}
+
 export function createPrototypeQuest(state: PrototypeState, draft: Omit<PrototypeQuest, "id" | "status" | "reward" | "completedAt">): PrototypeState {
   const title = draft.title.trim();
   if (!title) return state;
-  return { ...state, quests: [{ ...draft, title, id: crypto.randomUUID(), status: "open" }, ...state.quests] };
+
+  return {
+    ...state,
+    quests: [{ ...draft, title, id: crypto.randomUUID(), status: "open" }, ...state.quests],
+  };
 }
 
 export function settlePrototypeQuest(state: PrototypeState, id: string): PrototypeState {
@@ -83,6 +123,7 @@ export function settlePrototypeQuest(state: PrototypeState, id: string): Prototy
   };
 
   return {
+    ...state,
     totalXp: state.totalXp + reward.xp,
     coinBalance: state.coinBalance + reward.coins,
     transactions: [transaction, ...state.transactions],
