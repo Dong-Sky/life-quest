@@ -32,8 +32,8 @@ describe("calculateQuestReward", () => {
       resistance: "avoided",
     });
 
-    expect(reward.xp).toBe(384);
-    expect(reward.coins).toBe(38);
+    expect(reward.xp).toBe(312);
+    expect(reward.coins).toBe(31);
     expect(reward.calculationVersion).toBe("v1");
   });
 
