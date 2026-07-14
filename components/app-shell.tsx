@@ -9,7 +9,7 @@ const navigation = [
   { href: "/quests", label: "任务", icon: "✓" },
   { href: "/mainlines", label: "主线", icon: "↗" },
   { href: "/reward-lab", label: "奖励试验台", icon: "✦" },
-  { href: "#", label: "副本", icon: "◇", disabled: true },
+  { href: "/projects", label: "副本", icon: "◇" },
   { href: "#", label: "周结算", icon: "◫", disabled: true },
 ];
 
