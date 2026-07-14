@@ -24,6 +24,16 @@ The system defines and controls:
 
 The product must not prescribe what a successful life should look like.
 
+## Product References
+
+Read these before implementing a related feature:
+
+- `docs/product/vision.md`
+- `docs/product/mvp-scope.md`
+- `docs/product/ui-direction.md`
+- `docs/architecture/overview.md`
+- the active task in `docs/tasks/`
+
 ## Core Product Rules
 
 - Users cannot manually enter XP or coin rewards.
@@ -34,6 +44,12 @@ The product must not prescribe what a successful life should look like.
 - User data is private by default.
 - Social sharing must be opt-in.
 - Do not introduce public rankings without explicit approval.
+
+## UI Direction
+
+- Use the light workbench direction in `docs/product/ui-direction.md`.
+- Aim for calm, high-density productivity UI; do not copy ChatGPT/OpenAI branding, trademarks, logos, icons, or proprietary assets.
+- Keep game feedback supportive and secondary to the user's tasks.
 
 ## Engineering Rules
 
