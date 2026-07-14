@@ -53,6 +53,12 @@ export interface PrototypeQuestDraft {
   };
 }
 
+export interface PrototypeQuestEdit {
+  title: string;
+  mainlineId?: string;
+  projectId?: string;
+}
+
 export interface PrototypeTransaction {
   id: string;
   questId: string;
@@ -149,6 +155,20 @@ export function createPrototypeMainline(state: PrototypeState, draft: Pick<Proto
   };
 }
 
+export function updatePrototypeMainline(state: PrototypeState, id: string, draft: Pick<PrototypeMainline, "name" | "vision">): PrototypeState {
+  const name = draft.name.trim();
+  if (!name || !state.mainlines.some((mainline) => mainline.id === id)) return state;
+
+  return {
+    ...state,
+    mainlines: state.mainlines.map((mainline) => mainline.id === id ? {
+      ...mainline,
+      name,
+      vision: draft.vision.trim(),
+    } : mainline),
+  };
+}
+
 export function createPrototypeProject(state: PrototypeState, draft: Pick<PrototypeProject, "name" | "victoryCondition" | "mainlineId" | "dueDate">): PrototypeState {
   const name = draft.name.trim();
   if (!name) return state;
@@ -159,11 +179,27 @@ export function createPrototypeProject(state: PrototypeState, draft: Pick<Protot
       id: crypto.randomUUID(),
       name,
       victoryCondition: draft.victoryCondition.trim(),
-      mainlineId: draft.mainlineId,
-      dueDate: draft.dueDate,
+      mainlineId: draft.mainlineId || undefined,
+      dueDate: draft.dueDate || undefined,
       status: "active",
       createdAt: new Date().toISOString(),
     }, ...state.projects],
+  };
+}
+
+export function updatePrototypeProject(state: PrototypeState, id: string, draft: Pick<PrototypeProject, "name" | "victoryCondition" | "mainlineId" | "dueDate">): PrototypeState {
+  const name = draft.name.trim();
+  if (!name || !state.projects.some((project) => project.id === id)) return state;
+
+  return {
+    ...state,
+    projects: state.projects.map((project) => project.id === id ? {
+      ...project,
+      name,
+      victoryCondition: draft.victoryCondition.trim(),
+      mainlineId: draft.mainlineId || undefined,
+      dueDate: draft.dueDate || undefined,
+    } : project),
   };
 }
 
@@ -185,6 +221,22 @@ export function createPrototypeQuest(state: PrototypeState, draft: PrototypeQues
       id: crypto.randomUUID(),
       status: "open",
     }, ...state.quests],
+  };
+}
+
+export function updatePrototypeQuest(state: PrototypeState, id: string, draft: PrototypeQuestEdit): PrototypeState {
+  const title = draft.title.trim();
+  const quest = state.quests.find((item) => item.id === id);
+  if (!quest || !title) return state;
+
+  return {
+    ...state,
+    quests: state.quests.map((item) => item.id === id ? {
+      ...item,
+      title,
+      mainlineId: draft.mainlineId || undefined,
+      projectId: item.recurrence ? undefined : draft.projectId || undefined,
+    } : item),
   };
 }
 
