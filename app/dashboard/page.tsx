@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { calculateLevelProgress } from "@/src/domain/rewards/calculate-level";
 import { initialPrototypeState, readPrototypeState, settlePrototypeQuest, type PrototypeState, writePrototypeState } from "@/src/prototype/state";
 
 export default function DashboardPage() {
   const [state, setState] = useState<PrototypeState>(() => typeof window === "undefined" ? initialPrototypeState() : readPrototypeState());
-  const complete = (id: string) => setState((current) => { const next = settlePrototypeQuest(current, id); writePrototypeState(next); return next; });
+  const complete = (id: string) => setState((current) => {
+    const next = settlePrototypeQuest(current, id);
+    writePrototypeState(next);
+    return next;
+  });
   const level = calculateLevelProgress(state.totalXp);
   const open = state.quests.filter((quest) => quest.status === "open").slice(0, 3);
 
@@ -18,7 +22,16 @@ export default function DashboardPage() {
       <div className="rounded-xl border border-[var(--line)] bg-white p-4"><div className="flex justify-between text-xs text-[var(--muted)]"><span>距下一等级</span><span>{state.totalXp} / {level.nextLevelXp} XP</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100"><div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${Math.max(4, level.progress * 100)}%` }} /></div></div>
       <Card label="金币余额" value={<>{state.coinBalance} <span className="text-sm font-normal text-[var(--muted)]">coins</span></>} />
     </section>
-    <div className="mt-7 grid gap-7 lg:grid-cols-[minmax(0,1.55fr)_minmax(260px,0.9fr)]"><section><div className="flex items-center justify-between"><h2 className="text-base font-semibold">今日三件事</h2><Link className="text-xs text-[var(--accent)]" href="/quests">查看全部</Link></div><div className="mt-3 divide-y divide-[var(--line)] rounded-xl border border-[var(--line)] bg-white">{open.length ? open.map((quest) => <article className="flex items-center gap-3 p-4" key={quest.id}><button aria-label={`完成：${quest.title}`} className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-[var(--line)] hover:border-[var(--success)] hover:text-[var(--success)]" onClick={() => complete(quest.id)}>✓</button><div className="min-w-0 flex-1"><p className="font-medium">{quest.title}</p><p className="mt-1 text-xs text-[var(--muted)]">点击圆圈完成并结算</p></div></article>) : <p className="p-6 text-sm text-[var(--muted)]">今天的任务已全部完成。</p>}</div></section><section><h2 className="text-base font-semibold">最近结算</h2><div className="mt-3 space-y-3">{state.quests.filter((quest) => quest.status === "completed").slice(0, 2).map((quest) => <article className="rounded-xl border border-[var(--line)] bg-white p-4" key={quest.id}><p className="font-medium">{quest.title}</p><p className="mt-2 text-sm text-[var(--success)]">+{quest.reward?.xp} XP · +{quest.reward?.coins} coins</p></article>) || <p />}</div></section></div>
+    <div className="mt-7 grid gap-7 lg:grid-cols-[minmax(0,1.55fr)_minmax(260px,0.9fr)]">
+      <section><div className="flex items-center justify-between"><h2 className="text-base font-semibold">今日三件事</h2><Link className="text-xs text-[var(--accent)]" href="/quests">查看全部</Link></div><div className="mt-3 divide-y divide-[var(--line)] rounded-xl border border-[var(--line)] bg-white">{open.length ? open.map((quest) => <article className="flex items-center gap-3 p-4" key={quest.id}><button aria-label={`完成：${quest.title}`} className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-[var(--line)] hover:border-[var(--success)] hover:text-[var(--success)]" onClick={() => complete(quest.id)}>✓</button><div className="min-w-0 flex-1"><p className="font-medium">{quest.title}</p><p className="mt-1 text-xs text-[var(--muted)]">点击圆圈完成并结算</p></div></article>) : <p className="p-6 text-sm text-[var(--muted)]">今天的任务已全部完成。</p>}</div></section>
+      <aside className="space-y-6">
+        <section><h2 className="text-base font-semibold">最近结算</h2><div className="mt-3 space-y-3">{state.transactions.length ? state.transactions.slice(0, 2).map((transaction) => { const quest = state.quests.find((item) => item.id === transaction.questId); return <article className="rounded-xl border border-[var(--line)] bg-white p-4" key={transaction.id}><p className="font-medium">{quest?.title ?? "已结算任务"}</p><p className="mt-2 text-sm text-[var(--success)]">+{transaction.xpDelta} XP · +{transaction.coinDelta} coins</p></article>; }) : <p className="rounded-xl border border-dashed border-[var(--line)] bg-white p-4 text-sm text-[var(--muted)]">完成一项任务后，会在这里留下结算记录。</p>}</div></section>
+        <section><div className="flex items-center justify-between"><h2 className="text-base font-semibold">正在推进的主线</h2><Link className="text-xs text-[var(--accent)]" href="/mainlines">管理主线</Link></div><div className="mt-3 space-y-3">{state.mainlines.length ? state.mainlines.slice(0, 3).map((mainline) => { const count = state.quests.filter((quest) => quest.mainlineId === mainline.id && quest.status === "open").length; return <article className="rounded-xl border border-[var(--line)] bg-white p-4" key={mainline.id}><p className="font-medium">{mainline.name}</p><p className="mt-2 text-sm text-[var(--muted)]">{count} 个待推进任务</p></article>; }) : <p className="rounded-xl border border-dashed border-[var(--line)] bg-white p-4 text-sm text-[var(--muted)]">先创建一条主线，把每天的行动连接到长期方向。</p>}</div></section>
+      </aside>
+    </div>
   </div>;
 }
-function Card({ label, value }: { label: string; value: React.ReactNode }) { return <div className="rounded-xl border border-[var(--line)] bg-white p-4"><p className="text-xs text-[var(--muted)]">{label}</p><p className="mt-2 text-2xl font-semibold">{value}</p></div>; }
+
+function Card({ label, value }: { label: string; value: ReactNode }) {
+  return <div className="rounded-xl border border-[var(--line)] bg-white p-4"><p className="text-xs text-[var(--muted)]">{label}</p><p className="mt-2 text-2xl font-semibold">{value}</p></div>;
+}
