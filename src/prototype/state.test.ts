@@ -6,6 +6,7 @@ function stateWithRecurringQuest(targetCount: number): PrototypeState {
   const cadence = targetCount === 1 ? "daily" : "weekly";
   return {
     mainlines: [],
+    projects: [],
     totalXp: 0,
     coinBalance: 0,
     transactions: [],
