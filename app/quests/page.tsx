@@ -18,9 +18,17 @@ export default function QuestsPage() {
   const [difficulty, setDifficulty] = useState<Difficulty>("standard");
   const [importance, setImportance] = useState<Importance>("helpful");
   const [resistance, setResistance] = useState<Resistance>("none");
+  const [mainlineId, setMainlineId] = useState("");
   const save = (next: PrototypeState) => { writePrototypeState(next); setState(next); };
   const create = () => {
-    const next = createPrototypeQuest(state, { title, questType, difficulty, importance, resistance });
+    const next = createPrototypeQuest(state, {
+      title,
+      questType,
+      difficulty,
+      importance,
+      resistance,
+      mainlineId: mainlineId || undefined,
+    });
     if (next !== state) { save(next); setTitle(""); }
   };
   const reset = () => save(initialPrototypeState());
@@ -30,10 +38,14 @@ export default function QuestsPage() {
     <form className="mt-5 rounded-xl border border-[var(--line)] bg-[#fafafa] p-4" onSubmit={(event) => { event.preventDefault(); create(); }}>
       <label className="grid gap-2 text-sm"><span className="font-medium">下一步行动</span><input className="rounded-lg border border-[var(--line)] bg-white px-3 py-2.5 outline-none focus:border-[var(--accent)]" onChange={(event) => setTitle(event.target.value)} placeholder="例如：完成本周三项关键任务" value={title} /></label>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Select label="任务类型" options={fieldOptions.questType} value={questType} onChange={(value) => setQuestType(value as QuestType)} /><Select label="难度" options={fieldOptions.difficulty} value={difficulty} onChange={(value) => setDifficulty(value as Difficulty)} /><Select label="重要度" options={fieldOptions.importance} value={importance} onChange={(value) => setImportance(value as Importance)} /><Select label="心理阻力" options={fieldOptions.resistance} value={resistance} onChange={(value) => setResistance(value as Resistance)} /></div>
+      <label className="mt-4 grid max-w-sm gap-1.5 text-xs text-[var(--muted)]"><span>所属主线（可选）</span><select className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm text-[var(--ink)]" value={mainlineId} onChange={(event) => setMainlineId(event.target.value)}><option value="">暂不关联主线</option>{state.mainlines.map((mainline) => <option key={mainline.id} value={mainline.id}>{mainline.name}</option>)}</select></label>
       <div className="mt-4 flex justify-end"><button className="rounded-lg bg-[var(--ink)] px-4 py-2 text-sm font-medium text-white" type="submit">创建任务</button></div>
     </form>
     <section className="mt-7 overflow-hidden rounded-xl border border-[var(--line)] bg-white">
-      {state.quests.map((quest) => <article className="flex items-center justify-between gap-4 border-b border-[var(--line)] px-4 py-4 last:border-b-0" key={quest.id}><div><p className={quest.status === "completed" ? "font-medium text-[var(--muted)] line-through" : "font-medium"}>{quest.title}</p><p className="mt-1 text-xs text-[var(--muted)]">{quest.questType} · {quest.difficulty} · {quest.importance}</p></div>{quest.status === "completed" ? <span className="text-xs text-[var(--success)]">+{quest.reward?.xp} XP · +{quest.reward?.coins} coins</span> : <button className="rounded-md bg-[var(--accent-soft)] px-2.5 py-1.5 text-xs font-medium text-[var(--accent)]" onClick={() => save(settlePrototypeQuest(state, quest.id))}>完成并结算</button>}</article>)}
+      {state.quests.map((quest) => {
+        const mainline = state.mainlines.find((item) => item.id === quest.mainlineId);
+        return <article className="flex items-center justify-between gap-4 border-b border-[var(--line)] px-4 py-4 last:border-b-0" key={quest.id}><div><p className={quest.status === "completed" ? "font-medium text-[var(--muted)] line-through" : "font-medium"}>{quest.title}</p><p className="mt-1 text-xs text-[var(--muted)]">{mainline?.name ?? "未关联主线"} · {quest.questType} · {quest.difficulty}</p></div>{quest.status === "completed" ? <span className="text-xs text-[var(--success)]">+{quest.reward?.xp} XP · +{quest.reward?.coins} coins</span> : <button className="rounded-md bg-[var(--accent-soft)] px-2.5 py-1.5 text-xs font-medium text-[var(--accent)]" onClick={() => save(settlePrototypeQuest(state, quest.id))}>完成并结算</button>}</article>;
+      })}
     </section>
   </div>;
 }
