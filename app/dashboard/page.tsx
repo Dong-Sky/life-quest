@@ -1,19 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { calculateLevelProgress } from "@/src/domain/rewards/calculate-level";
 import { initialPrototypeState, readPrototypeState, settlePrototypeQuest, type PrototypeState, writePrototypeState } from "@/src/prototype/state";
 
 export default function DashboardPage() {
-  const [state, setState] = useState<PrototypeState>(initialPrototypeState);
-  const [ready, setReady] = useState(false);
-  useEffect(() => { setState(readPrototypeState()); setReady(true); }, []);
+  const [state, setState] = useState<PrototypeState>(() => typeof window === "undefined" ? initialPrototypeState() : readPrototypeState());
   const complete = (id: string) => setState((current) => { const next = settlePrototypeQuest(current, id); writePrototypeState(next); return next; });
   const level = calculateLevelProgress(state.totalXp);
   const open = state.quests.filter((quest) => quest.status === "open").slice(0, 3);
 
-  if (!ready) return <div className="mx-auto max-w-6xl px-5 py-8 text-sm text-[var(--muted)] sm:px-8">正在载入体验数据…</div>;
   return <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
     <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--line)] pb-6"><div><p className="text-sm text-[var(--muted)]">本地测试原型</p><h1 className="mt-1 text-2xl font-semibold tracking-tight">今天，推进一件重要的事。</h1></div><Link className="rounded-lg bg-[var(--ink)] px-4 py-2 text-sm font-medium text-white hover:bg-black" href="/quests">+ 新建任务</Link></header>
     <section className="mt-7 grid gap-3 sm:grid-cols-3">
