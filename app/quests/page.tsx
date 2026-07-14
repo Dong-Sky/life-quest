@@ -20,6 +20,7 @@ export default function QuestsPage() {
   const [importance, setImportance] = useState<Importance>("helpful");
   const [resistance, setResistance] = useState<Resistance>("none");
   const [mainlineId, setMainlineId] = useState("");
+  const [projectId, setProjectId] = useState("");
   const [isRecurring, setIsRecurring] = useState(false);
   const [cadence, setCadence] = useState<RecurrenceCadence>("daily");
   const [weeklyTarget, setWeeklyTarget] = useState(3);
@@ -32,6 +33,7 @@ export default function QuestsPage() {
       importance,
       resistance,
       mainlineId: mainlineId || undefined,
+      projectId: isRecurring ? undefined : projectId || undefined,
       recurrence: isRecurring ? { cadence, targetCount: cadence === "weekly" ? weeklyTarget : undefined } : undefined,
     });
     if (next !== state) { save(next); setTitle(""); }
@@ -47,15 +49,17 @@ export default function QuestsPage() {
         <label className="grid max-w-sm gap-1.5 text-xs text-[var(--muted)]"><span>所属主线（可选）</span><select className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm text-[var(--ink)]" value={mainlineId} onChange={(event) => setMainlineId(event.target.value)}><option value="">暂不关联主线</option>{state.mainlines.map((mainline) => <option key={mainline.id} value={mainline.id}>{mainline.name}</option>)}</select></label>
         <div className="rounded-lg border border-[var(--line)] bg-white px-3 py-2.5"><label className="flex cursor-pointer items-center gap-2 text-sm font-medium"><input checked={isRecurring} className="h-4 w-4 accent-[var(--accent)]" onChange={(event) => setIsRecurring(event.target.checked)} type="checkbox" />设为周期任务</label><p className="mt-1 text-xs text-[var(--muted)]">例如每天锻炼，或每周完成 3 次运动。</p></div>
       </div>
+      {!isRecurring ? <label className="mt-3 grid max-w-sm gap-1.5 text-xs text-[var(--muted)]"><span>所属副本（可选）</span><select className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm text-[var(--ink)]" value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">暂不关联副本</option>{state.projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label> : null}
       {isRecurring ? <div className="mt-3 grid max-w-xl gap-3 sm:grid-cols-2"><Select label="重复频率" options={[["daily", "每天"], ["weekly", "每周"]]} value={cadence} onChange={(value) => setCadence(value as RecurrenceCadence)} />{cadence === "weekly" ? <label className="grid gap-1.5 text-xs text-[var(--muted)]"><span>本周目标次数</span><input className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm text-[var(--ink)]" max="7" min="1" onChange={(event) => setWeeklyTarget(Number(event.target.value))} type="number" value={weeklyTarget} /></label> : <p className="self-end pb-2 text-sm text-[var(--muted)]">每天完成 1 次后，明天会自动重新出现。</p>}</div> : null}
       <div className="mt-4 flex justify-end"><button className="rounded-lg bg-[var(--ink)] px-4 py-2 text-sm font-medium text-white" type="submit">创建任务</button></div>
     </form>
     <section className="mt-7 overflow-hidden rounded-xl border border-[var(--line)] bg-white">
       {state.quests.map((quest) => {
         const mainline = state.mainlines.find((item) => item.id === quest.mainlineId);
+        const project = state.projects.find((item) => item.id === quest.projectId);
         const recurring = recurrenceDescription(quest);
         const action = quest.recurrence ? "记录一次并结算" : "完成并结算";
-        return <article className="flex items-center justify-between gap-4 border-b border-[var(--line)] px-4 py-4 last:border-b-0" key={quest.id}><div><p className={quest.status === "completed" ? "font-medium text-[var(--muted)] line-through" : "font-medium"}>{quest.title}</p><p className="mt-1 text-xs text-[var(--muted)]">{mainline?.name ?? "未关联主线"} · {recurring ?? `${quest.questType} · ${quest.difficulty}`}</p></div>{quest.status === "completed" ? <span className="text-xs text-[var(--success)]">{quest.recurrence ? "本周期已完成" : `+${quest.reward?.xp} XP · +${quest.reward?.coins} coins`}</span> : <button className="rounded-md bg-[var(--accent-soft)] px-2.5 py-1.5 text-xs font-medium text-[var(--accent)]" onClick={() => save(settlePrototypeQuest(state, quest.id))}>{action}</button>}</article>;
+        return <article className="flex items-center justify-between gap-4 border-b border-[var(--line)] px-4 py-4 last:border-b-0" key={quest.id}><div><p className={quest.status === "completed" ? "font-medium text-[var(--muted)] line-through" : "font-medium"}>{quest.title}</p><p className="mt-1 text-xs text-[var(--muted)]">{project?.name ?? mainline?.name ?? "未关联主线"} · {recurring ?? `${quest.questType} · ${quest.difficulty}`}</p></div>{quest.status === "completed" ? <span className="text-xs text-[var(--success)]">{quest.recurrence ? "本周期已完成" : `+${quest.reward?.xp} XP · +${quest.reward?.coins} coins`}</span> : <button className="rounded-md bg-[var(--accent-soft)] px-2.5 py-1.5 text-xs font-medium text-[var(--accent)]" onClick={() => save(settlePrototypeQuest(state, quest.id))}>{action}</button>}</article>;
       })}
     </section>
   </div>;
