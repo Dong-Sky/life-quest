@@ -1,5 +1,6 @@
-import { calculateQuestReward } from "@/src/domain/rewards/calculate-quest-reward";
-import type { Difficulty, Importance, QuestReward, QuestType, Resistance } from "@/src/domain/rewards/types";
+import { calculateQuestReward } from "../domain/rewards/calculate-quest-reward";
+import { createRecurrenceSettings, isCurrentCycle, resetForCurrentCycle, type RecurrenceCadence, type RecurrenceSettings } from "./recurrence";
+import type { Difficulty, Importance, QuestReward, QuestType, Resistance } from "../domain/rewards/types";
 
 export type QuestStatus = "open" | "completed";
 export type MainlineStatus = "active";
@@ -20,9 +21,23 @@ export interface PrototypeQuest {
   importance: Importance;
   resistance: Resistance;
   mainlineId?: string;
+  recurrence?: RecurrenceSettings;
   status: QuestStatus;
   reward?: QuestReward;
   completedAt?: string;
+}
+
+export interface PrototypeQuestDraft {
+  title: string;
+  questType: QuestType;
+  difficulty: Difficulty;
+  importance: Importance;
+  resistance: Resistance;
+  mainlineId?: string;
+  recurrence?: {
+    cadence: RecurrenceCadence;
+    targetCount?: number;
+  };
 }
 
 export interface PrototypeTransaction {
@@ -58,6 +73,24 @@ export function initialPrototypeState(): PrototypeState {
   };
 }
 
+export function refreshPrototypeStateForCurrentCycle(state: PrototypeState, now = new Date()): PrototypeState {
+  let changed = false;
+  const quests = state.quests.map((quest) => {
+    if (!quest.recurrence || isCurrentCycle(quest.recurrence, now)) return quest;
+
+    changed = true;
+    return {
+      ...quest,
+      status: "open" as const,
+      reward: undefined,
+      completedAt: undefined,
+      recurrence: resetForCurrentCycle(quest.recurrence, now),
+    };
+  });
+
+  return changed ? { ...state, quests } : state;
+}
+
 export function readPrototypeState(): PrototypeState {
   try {
     const stored = window.localStorage.getItem(PROTOTYPE_KEY);
@@ -65,13 +98,16 @@ export function readPrototypeState(): PrototypeState {
 
     const initial = initialPrototypeState();
     const parsed = JSON.parse(stored) as Partial<PrototypeState>;
-    return {
+    const hydrated = {
       ...initial,
       ...parsed,
       mainlines: parsed.mainlines ?? [],
       quests: parsed.quests ?? initial.quests,
       transactions: parsed.transactions ?? [],
     };
+    const refreshed = refreshPrototypeStateForCurrentCycle(hydrated);
+    if (refreshed !== hydrated) writePrototypeState(refreshed);
+    return refreshed;
   } catch {
     return initialPrototypeState();
   }
@@ -97,19 +133,31 @@ export function createPrototypeMainline(state: PrototypeState, draft: Pick<Proto
   };
 }
 
-export function createPrototypeQuest(state: PrototypeState, draft: Omit<PrototypeQuest, "id" | "status" | "reward" | "completedAt">): PrototypeState {
+export function createPrototypeQuest(state: PrototypeState, draft: PrototypeQuestDraft): PrototypeState {
   const title = draft.title.trim();
   if (!title) return state;
 
+  const now = new Date();
+  const recurrence = draft.recurrence
+    ? createRecurrenceSettings(draft.recurrence.cadence, draft.recurrence.targetCount, now)
+    : undefined;
+
   return {
     ...state,
-    quests: [{ ...draft, title, id: crypto.randomUUID(), status: "open" }, ...state.quests],
+    quests: [{
+      ...draft,
+      title,
+      recurrence,
+      id: crypto.randomUUID(),
+      status: "open",
+    }, ...state.quests],
   };
 }
 
 export function settlePrototypeQuest(state: PrototypeState, id: string): PrototypeState {
-  const quest = state.quests.find((item) => item.id === id);
-  if (!quest || quest.status === "completed") return state;
+  const refreshed = refreshPrototypeStateForCurrentCycle(state);
+  const quest = refreshed.quests.find((item) => item.id === id);
+  if (!quest || quest.status === "completed") return refreshed;
 
   const reward = calculateQuestReward(quest);
   const createdAt = new Date().toISOString();
@@ -122,11 +170,22 @@ export function settlePrototypeQuest(state: PrototypeState, id: string): Prototy
     createdAt,
   };
 
+  const nextCompletedCount = quest.recurrence
+    ? quest.recurrence.completedCount + 1
+    : 1;
+  const isComplete = !quest.recurrence || nextCompletedCount >= quest.recurrence.targetCount;
+
   return {
-    ...state,
-    totalXp: state.totalXp + reward.xp,
-    coinBalance: state.coinBalance + reward.coins,
-    transactions: [transaction, ...state.transactions],
-    quests: state.quests.map((item) => item.id === id ? { ...item, status: "completed", completedAt: createdAt, reward } : item),
+    ...refreshed,
+    totalXp: refreshed.totalXp + reward.xp,
+    coinBalance: refreshed.coinBalance + reward.coins,
+    transactions: [transaction, ...refreshed.transactions],
+    quests: refreshed.quests.map((item) => item.id === id ? {
+      ...item,
+      status: isComplete ? "completed" : "open",
+      reward,
+      completedAt: isComplete ? createdAt : undefined,
+      recurrence: item.recurrence ? { ...item.recurrence, completedCount: nextCompletedCount } : undefined,
+    } : item),
   };
 }
