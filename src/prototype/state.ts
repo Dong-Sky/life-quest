@@ -4,12 +4,23 @@ import type { Difficulty, Importance, QuestReward, QuestType, Resistance } from 
 
 export type QuestStatus = "open" | "completed";
 export type MainlineStatus = "active";
+export type ProjectStatus = "active";
 
 export interface PrototypeMainline {
   id: string;
   name: string;
   vision: string;
   status: MainlineStatus;
+  createdAt: string;
+}
+
+export interface PrototypeProject {
+  id: string;
+  name: string;
+  victoryCondition: string;
+  mainlineId?: string;
+  dueDate?: string;
+  status: ProjectStatus;
   createdAt: string;
 }
 
@@ -21,6 +32,7 @@ export interface PrototypeQuest {
   importance: Importance;
   resistance: Resistance;
   mainlineId?: string;
+  projectId?: string;
   recurrence?: RecurrenceSettings;
   status: QuestStatus;
   reward?: QuestReward;
@@ -34,6 +46,7 @@ export interface PrototypeQuestDraft {
   importance: Importance;
   resistance: Resistance;
   mainlineId?: string;
+  projectId?: string;
   recurrence?: {
     cadence: RecurrenceCadence;
     targetCount?: number;
@@ -51,6 +64,7 @@ export interface PrototypeTransaction {
 
 export interface PrototypeState {
   mainlines: PrototypeMainline[];
+  projects: PrototypeProject[];
   quests: PrototypeQuest[];
   totalXp: number;
   coinBalance: number;
@@ -62,6 +76,7 @@ export const PROTOTYPE_KEY = "life-quest-prototype-v1";
 export function initialPrototypeState(): PrototypeState {
   return {
     mainlines: [],
+    projects: [],
     totalXp: 0,
     coinBalance: 0,
     transactions: [],
@@ -102,6 +117,7 @@ export function readPrototypeState(): PrototypeState {
       ...initial,
       ...parsed,
       mainlines: parsed.mainlines ?? [],
+      projects: parsed.projects ?? [],
       quests: parsed.quests ?? initial.quests,
       transactions: parsed.transactions ?? [],
     };
@@ -130,6 +146,24 @@ export function createPrototypeMainline(state: PrototypeState, draft: Pick<Proto
       status: "active",
       createdAt: new Date().toISOString(),
     }, ...state.mainlines],
+  };
+}
+
+export function createPrototypeProject(state: PrototypeState, draft: Pick<PrototypeProject, "name" | "victoryCondition" | "mainlineId" | "dueDate">): PrototypeState {
+  const name = draft.name.trim();
+  if (!name) return state;
+
+  return {
+    ...state,
+    projects: [{
+      id: crypto.randomUUID(),
+      name,
+      victoryCondition: draft.victoryCondition.trim(),
+      mainlineId: draft.mainlineId,
+      dueDate: draft.dueDate,
+      status: "active",
+      createdAt: new Date().toISOString(),
+    }, ...state.projects],
   };
 }
 
