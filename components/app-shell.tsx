@@ -7,9 +7,9 @@ import { usePathname } from "next/navigation";
 const navigation = [
   { href: "/dashboard", label: "今日", icon: "◌" },
   { href: "/quests", label: "任务", icon: "✓" },
+  { href: "/mainlines", label: "主线", icon: "↗" },
   { href: "/reward-lab", label: "奖励试验台", icon: "✦" },
   { href: "#", label: "副本", icon: "◇", disabled: true },
-  { href: "#", label: "主线", icon: "↗", disabled: true },
   { href: "#", label: "周结算", icon: "◫", disabled: true },
 ];
 
@@ -30,13 +30,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         <nav aria-label="主导航" className="flex gap-1 overflow-x-auto lg:flex-col">
           {navigation.map((item) => {
             const active = pathname === item.href;
-            const className = `flex min-w-fit items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
-              active
-                ? "bg-[var(--accent-soft)] font-medium text-[var(--accent)]"
-                : item.disabled
-                  ? "cursor-not-allowed text-gray-400"
-                  : "text-[var(--muted)] hover:bg-gray-100 hover:text-[var(--ink)]"
-            }`;
+            const className = `flex min-w-fit items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${active
+              ? "bg-[var(--accent-soft)] font-medium text-[var(--accent)]"
+              : item.disabled
+                ? "cursor-not-allowed text-gray-400"
+                : "text-[var(--muted)] hover:bg-gray-100 hover:text-[var(--ink)]"}`;
 
             if (item.disabled) {
               return <span aria-disabled="true" className={className} key={item.label}><span>{item.icon}</span>{item.label}</span>;
