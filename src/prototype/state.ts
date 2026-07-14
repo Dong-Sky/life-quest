@@ -1,6 +1,6 @@
-import { calculateQuestReward } from "@/src/domain/rewards/calculate-quest-reward";
-import { createRecurrenceSettings, isCurrentCycle, resetForCurrentCycle, type RecurrenceCadence, type RecurrenceSettings } from "@/src/prototype/recurrence";
-import type { Difficulty, Importance, QuestReward, QuestType, Resistance } from "@/src/domain/rewards/types";
+import { calculateQuestReward } from "../domain/rewards/calculate-quest-reward";
+import { createRecurrenceSettings, isCurrentCycle, resetForCurrentCycle, type RecurrenceCadence, type RecurrenceSettings } from "./recurrence";
+import type { Difficulty, Importance, QuestReward, QuestType, Resistance } from "../domain/rewards/types";
 
 export type QuestStatus = "open" | "completed";
 export type MainlineStatus = "active";
