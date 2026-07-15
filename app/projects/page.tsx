@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { createPrototypeMilestone, createPrototypeProject, getPrototypeMilestoneProgress, initialPrototypeState, readPrototypeState, type PrototypeMilestone, type PrototypeProject, type PrototypeQuest, type PrototypeState, updatePrototypeMilestone, updatePrototypeProject, writePrototypeState } from "@/src/prototype/state";
 
@@ -71,7 +72,7 @@ export default function ProjectsPage() {
   };
 
   return <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8">
-    <header className="border-b border-[var(--line)] pb-6"><p className="text-sm text-[var(--muted)]">副本</p><h1 className="mt-1 text-2xl font-semibold tracking-tight">为一件有终点的事，建立推进路径。</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">副本适合一次旅行、考试计划或项目交付。先不关联主线也没关系，之后可随时编辑归属。</p></header>
+    <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--line)] pb-6"><div><p className="text-sm text-[var(--muted)]">副本</p><h1 className="mt-1 text-2xl font-semibold tracking-tight">为一件有终点的事，建立推进路径。</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">副本适合一次旅行、考试计划或项目交付。先不关联主线也没关系，之后可随时编辑归属。</p></div><Link className="rounded-lg border border-[var(--line)] bg-white px-3.5 py-2 text-sm font-medium hover:bg-gray-50" href="/shared-projects">共同副本</Link></header>
     <form className="mt-5 rounded-xl border border-[var(--line)] bg-[#fafafa] p-4" onSubmit={(event) => { event.preventDefault(); create(); }}>
       <div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-2 text-sm"><span className="font-medium">副本名称</span><input className="rounded-lg border border-[var(--line)] bg-white px-3 py-2.5 outline-none focus:border-[var(--accent)]" onChange={(event) => setName(event.target.value)} placeholder="例如：完成 12 周减脂计划" value={name} /></label><label className="grid gap-2 text-sm"><span className="font-medium">胜利条件（可选）</span><input className="rounded-lg border border-[var(--line)] bg-white px-3 py-2.5 outline-none focus:border-[var(--accent)]" onChange={(event) => setVictoryCondition(event.target.value)} placeholder="例如：完成全部训练与复盘" value={victoryCondition} /></label></div>
       <div className="mt-4 grid gap-4 sm:grid-cols-2"><MainlineSelect mainlines={state.mainlines} onChange={setMainlineId} value={mainlineId} /><label className="grid gap-1.5 text-xs text-[var(--muted)]"><span>目标日期（可选）</span><input className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm text-[var(--ink)]" onChange={(event) => setDueDate(event.target.value)} type="date" value={dueDate} /></label></div>
