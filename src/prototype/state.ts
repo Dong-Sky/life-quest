@@ -4,12 +4,23 @@ import type { Difficulty, Importance, QuestReward, QuestType, Resistance } from 
 
 export type QuestStatus = "open" | "completed";
 export type MainlineStatus = "active";
+export type ProjectStatus = "active";
 
 export interface PrototypeMainline {
   id: string;
   name: string;
   vision: string;
   status: MainlineStatus;
+  createdAt: string;
+}
+
+export interface PrototypeProject {
+  id: string;
+  name: string;
+  victoryCondition: string;
+  mainlineId?: string;
+  dueDate?: string;
+  status: ProjectStatus;
   createdAt: string;
 }
 
@@ -21,6 +32,7 @@ export interface PrototypeQuest {
   importance: Importance;
   resistance: Resistance;
   mainlineId?: string;
+  projectId?: string;
   recurrence?: RecurrenceSettings;
   status: QuestStatus;
   reward?: QuestReward;
@@ -34,10 +46,17 @@ export interface PrototypeQuestDraft {
   importance: Importance;
   resistance: Resistance;
   mainlineId?: string;
+  projectId?: string;
   recurrence?: {
     cadence: RecurrenceCadence;
     targetCount?: number;
   };
+}
+
+export interface PrototypeQuestEdit {
+  title: string;
+  mainlineId?: string;
+  projectId?: string;
 }
 
 export interface PrototypeTransaction {
@@ -51,6 +70,7 @@ export interface PrototypeTransaction {
 
 export interface PrototypeState {
   mainlines: PrototypeMainline[];
+  projects: PrototypeProject[];
   quests: PrototypeQuest[];
   totalXp: number;
   coinBalance: number;
@@ -62,6 +82,7 @@ export const PROTOTYPE_KEY = "life-quest-prototype-v1";
 export function initialPrototypeState(): PrototypeState {
   return {
     mainlines: [],
+    projects: [],
     totalXp: 0,
     coinBalance: 0,
     transactions: [],
@@ -102,6 +123,7 @@ export function readPrototypeState(): PrototypeState {
       ...initial,
       ...parsed,
       mainlines: parsed.mainlines ?? [],
+      projects: parsed.projects ?? [],
       quests: parsed.quests ?? initial.quests,
       transactions: parsed.transactions ?? [],
     };
@@ -133,6 +155,54 @@ export function createPrototypeMainline(state: PrototypeState, draft: Pick<Proto
   };
 }
 
+export function updatePrototypeMainline(state: PrototypeState, id: string, draft: Pick<PrototypeMainline, "name" | "vision">): PrototypeState {
+  const name = draft.name.trim();
+  if (!name || !state.mainlines.some((mainline) => mainline.id === id)) return state;
+
+  return {
+    ...state,
+    mainlines: state.mainlines.map((mainline) => mainline.id === id ? {
+      ...mainline,
+      name,
+      vision: draft.vision.trim(),
+    } : mainline),
+  };
+}
+
+export function createPrototypeProject(state: PrototypeState, draft: Pick<PrototypeProject, "name" | "victoryCondition" | "mainlineId" | "dueDate">): PrototypeState {
+  const name = draft.name.trim();
+  if (!name) return state;
+
+  return {
+    ...state,
+    projects: [{
+      id: crypto.randomUUID(),
+      name,
+      victoryCondition: draft.victoryCondition.trim(),
+      mainlineId: draft.mainlineId || undefined,
+      dueDate: draft.dueDate || undefined,
+      status: "active",
+      createdAt: new Date().toISOString(),
+    }, ...state.projects],
+  };
+}
+
+export function updatePrototypeProject(state: PrototypeState, id: string, draft: Pick<PrototypeProject, "name" | "victoryCondition" | "mainlineId" | "dueDate">): PrototypeState {
+  const name = draft.name.trim();
+  if (!name || !state.projects.some((project) => project.id === id)) return state;
+
+  return {
+    ...state,
+    projects: state.projects.map((project) => project.id === id ? {
+      ...project,
+      name,
+      victoryCondition: draft.victoryCondition.trim(),
+      mainlineId: draft.mainlineId || undefined,
+      dueDate: draft.dueDate || undefined,
+    } : project),
+  };
+}
+
 export function createPrototypeQuest(state: PrototypeState, draft: PrototypeQuestDraft): PrototypeState {
   const title = draft.title.trim();
   if (!title) return state;
@@ -151,6 +221,22 @@ export function createPrototypeQuest(state: PrototypeState, draft: PrototypeQues
       id: crypto.randomUUID(),
       status: "open",
     }, ...state.quests],
+  };
+}
+
+export function updatePrototypeQuest(state: PrototypeState, id: string, draft: PrototypeQuestEdit): PrototypeState {
+  const title = draft.title.trim();
+  const quest = state.quests.find((item) => item.id === id);
+  if (!quest || !title) return state;
+
+  return {
+    ...state,
+    quests: state.quests.map((item) => item.id === id ? {
+      ...item,
+      title,
+      mainlineId: draft.mainlineId || undefined,
+      projectId: item.recurrence ? undefined : draft.projectId || undefined,
+    } : item),
   };
 }
 
