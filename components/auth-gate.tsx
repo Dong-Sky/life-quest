@@ -24,10 +24,11 @@ export function AuthGate({ children }: AuthGateProps) {
       return;
     }
 
+    const client = supabase;
     let active = true;
 
     async function loadUser() {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await client.auth.getUser();
 
       if (active) {
         setUser(data.user);
@@ -37,7 +38,7 @@ export function AuthGate({ children }: AuthGateProps) {
 
     void loadUser();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = client.auth.onAuthStateChange((_event, session) => {
       if (active) {
         setUser(session?.user ?? null);
         setLoading(false);
