@@ -8,7 +8,7 @@ const navigation = [
   { href: "/dashboard", label: "今日", icon: "◌" },
   { href: "/quests", label: "任务", icon: "✓" },
   { href: "/mainlines", label: "主线", icon: "↗" },
-  { href: "/reward-lab", label: "奖励试验台", icon: "✦" },
+  { href: "/rewards", label: "奖励商城", icon: "✦" },
   { href: "/projects", label: "副本", icon: "◇" },
   { href: "#", label: "周结算", icon: "◫", disabled: true },
 ];
