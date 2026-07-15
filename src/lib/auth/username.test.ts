@@ -8,7 +8,7 @@ describe("username authentication helpers", () => {
   });
 
   it("creates a valid internal auth address without exposing a real email", () => {
-    expect(usernameToAuthEmail("小东")).toMatch(/^user\.[a-zA-Z0-9_-]+@users\.questline\.local$/);
+    expect(usernameToAuthEmail("小东")).toMatch(/^user\.[a-zA-Z0-9_-]+@users\.questline\.app$/);
   });
 
   it("requires a short, non-space username", () => {
