@@ -184,8 +184,14 @@ create policy "redemptions are private" on public.reward_redemptions for all usi
 create policy "milestones are private" on public.milestones for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "milestone links are private" on public.milestone_quests for all
 using (exists (select 1 from public.milestones where milestones.id = milestone_id and milestones.user_id = auth.uid()))
-with check (exists (select 1 from public.milestones where milestones.id = milestone_id and milestones.user_id = auth.uid()));
+with check (
+  exists (select 1 from public.milestones where milestones.id = milestone_id and milestones.user_id = auth.uid())
+  and exists (select 1 from public.quests where quests.id = quest_id and quests.user_id = auth.uid())
+);
 create policy "weekly plans are private" on public.weekly_plans for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "weekly plan links are private" on public.weekly_plan_quests for all
 using (exists (select 1 from public.weekly_plans where weekly_plans.id = weekly_plan_id and weekly_plans.user_id = auth.uid()))
-with check (exists (select 1 from public.weekly_plans where weekly_plans.id = weekly_plan_id and weekly_plans.user_id = auth.uid()));
+with check (
+  exists (select 1 from public.weekly_plans where weekly_plans.id = weekly_plan_id and weekly_plans.user_id = auth.uid())
+  and exists (select 1 from public.quests where quests.id = quest_id and quests.user_id = auth.uid())
+);
