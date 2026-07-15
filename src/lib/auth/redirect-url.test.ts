@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMagicLinkRedirectUrl } from "@/src/lib/auth/redirect-url";
+import { buildMagicLinkRedirectUrl } from "./redirect-url";
 
 describe("buildMagicLinkRedirectUrl", () => {
   it("adds the callback path to an origin", () => {
