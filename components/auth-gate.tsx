@@ -62,6 +62,7 @@ export function AuthGate({ children }: AuthGateProps) {
     return <PasswordLogin supabase={supabase} />;
   }
 
+  const authenticatedSupabase = supabase;
   const displayName = typeof user.user_metadata.display_name === "string" && user.user_metadata.display_name.trim()
     ? user.user_metadata.display_name
     : "已登录用户";
@@ -70,7 +71,7 @@ export function AuthGate({ children }: AuthGateProps) {
     if (!window.confirm("这会永久清空当前账号的任务、奖励、结算和计划，且不会影响其他账号。确定要重新开始吗？")) return;
 
     const initialState = initialPrototypeState();
-    const { error } = await supabase
+    const { error } = await authenticatedSupabase
       .from("workspace_states")
       .upsert({ user_id: user.id, state: initialState }, { onConflict: "user_id" });
 
@@ -83,7 +84,7 @@ export function AuthGate({ children }: AuthGateProps) {
     window.location.reload();
   }
 
-  return <CloudStateBridge key={user.id} supabase={supabase} user={user}><AppShell accountName={displayName} onResetWorkspace={() => void resetWorkspace()} onSignOut={() => void supabase.auth.signOut()}>{children}</AppShell></CloudStateBridge>;
+  return <CloudStateBridge key={user.id} supabase={authenticatedSupabase} user={user}><AppShell accountName={displayName} onResetWorkspace={() => void resetWorkspace()} onSignOut={() => void supabase.auth.signOut()}>{children}</AppShell></CloudStateBridge>;
 }
 
 function LoadingScreen() {
