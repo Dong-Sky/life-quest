@@ -43,7 +43,16 @@ export interface PrototypeReward {
   name: string;
   coinCost: number;
   isRepeatable: boolean;
+  isWishlisted: boolean;
+  wishlistedAt?: string;
   createdAt: string;
+}
+
+export interface PrototypeRewardDraft {
+  name: string;
+  coinCost: number;
+  isRepeatable: boolean;
+  isWishlisted?: boolean;
 }
 
 export interface PrototypeRewardRedemption {
@@ -77,6 +86,15 @@ export interface PrototypeWeeklyPlan {
   sourceWeekKey: string;
   questIds: string[];
   createdAt: string;
+}
+
+export interface PrototypeWeeklyPlanQuestDraft {
+  title: string;
+  questType: QuestType;
+  difficulty: Difficulty;
+  importance: Importance;
+  resistance: Resistance;
+  mainlineId?: string;
 }
 
 export interface PrototypeQuest {
@@ -190,7 +208,10 @@ export function readPrototypeState(): PrototypeState {
       mainlines: parsed.mainlines ?? [],
       projects: parsed.projects ?? [],
       milestones: (parsed.milestones ?? []).map((milestone) => ({ ...milestone, questIds: milestone.questIds ?? [] })),
-      rewards: parsed.rewards ?? [],
+      rewards: (parsed.rewards ?? []).map((reward) => ({
+        ...reward,
+        isWishlisted: reward.isWishlisted ?? false,
+      })),
       redemptions: parsed.redemptions ?? [],
       reviews: parsed.reviews ?? [],
       weeklyPlans: parsed.weeklyPlans ?? [],
@@ -233,21 +254,21 @@ export function getPrototypeWeeklyReviewSummary(state: PrototypeState, now = new
   };
 }
 
-export function createPrototypeWeeklyPlan(state: PrototypeState, now: Date, titles: string[]): PrototypeState {
+export function createPrototypeWeeklyPlan(state: PrototypeState, now: Date, drafts: PrototypeWeeklyPlanQuestDraft[]): PrototypeState {
   const sourceWeekKey = getPrototypeWeekKey(now);
   if (state.weeklyPlans.some((plan) => plan.sourceWeekKey === sourceWeekKey)) return state;
 
-  const uniqueTitles = [...new Set(titles.map((title) => title.trim()).filter(Boolean))].slice(0, 3);
-  if (!uniqueTitles.length) return state;
+  const uniqueDrafts = drafts
+    .map((draft) => ({ ...draft, title: draft.title.trim() }))
+    .filter((draft, index, items) => Boolean(draft.title) && items.findIndex((item) => item.title === draft.title) === index)
+    .slice(0, 3);
+  if (!uniqueDrafts.length) return state;
 
   const createdAt = now.toISOString();
-  const quests = uniqueTitles.map((title) => ({
+  const quests = uniqueDrafts.map((draft) => ({
     id: crypto.randomUUID(),
-    title,
-    questType: "standard" as const,
-    difficulty: "standard" as const,
-    importance: "helpful" as const,
-    resistance: "none" as const,
+    ...draft,
+    mainlineId: draft.mainlineId || undefined,
     status: "open" as const,
   }));
   const plan: PrototypeWeeklyPlan = {
@@ -387,7 +408,7 @@ export function getPrototypeMilestoneProgress(state: PrototypeState, milestone: 
   return { total, completed, isCompleted: total > 0 && completed === total };
 }
 
-export function createPrototypeReward(state: PrototypeState, draft: Pick<PrototypeReward, "name" | "coinCost" | "isRepeatable">): PrototypeState {
+export function createPrototypeReward(state: PrototypeState, draft: PrototypeRewardDraft): PrototypeState {
   const name = draft.name.trim();
   const coinCost = Math.floor(draft.coinCost);
   if (!name || !Number.isFinite(coinCost) || coinCost < 1) return state;
@@ -399,8 +420,25 @@ export function createPrototypeReward(state: PrototypeState, draft: Pick<Prototy
       name,
       coinCost,
       isRepeatable: draft.isRepeatable,
+      isWishlisted: draft.isWishlisted ?? false,
+      wishlistedAt: draft.isWishlisted ? new Date().toISOString() : undefined,
       createdAt: new Date().toISOString(),
     }, ...state.rewards],
+  };
+}
+
+export function togglePrototypeRewardWishlist(state: PrototypeState, rewardId: string): PrototypeState {
+  const reward = state.rewards.find((item) => item.id === rewardId);
+  if (!reward) return state;
+
+  const isWishlisted = !reward.isWishlisted;
+  return {
+    ...state,
+    rewards: state.rewards.map((item) => item.id === rewardId ? {
+      ...item,
+      isWishlisted,
+      wishlistedAt: isWishlisted ? new Date().toISOString() : undefined,
+    } : item),
   };
 }
 
