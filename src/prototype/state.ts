@@ -38,6 +38,22 @@ export interface PrototypeMilestoneProgress {
   isCompleted: boolean;
 }
 
+export interface PrototypeReward {
+  id: string;
+  name: string;
+  coinCost: number;
+  isRepeatable: boolean;
+  createdAt: string;
+}
+
+export interface PrototypeRewardRedemption {
+  id: string;
+  rewardId: string;
+  rewardName: string;
+  coinCost: number;
+  redeemedAt: string;
+}
+
 export interface PrototypeQuest {
   id: string;
   title: string;
@@ -86,6 +102,8 @@ export interface PrototypeState {
   mainlines: PrototypeMainline[];
   projects: PrototypeProject[];
   milestones: PrototypeMilestone[];
+  rewards: PrototypeReward[];
+  redemptions: PrototypeRewardRedemption[];
   quests: PrototypeQuest[];
   totalXp: number;
   coinBalance: number;
@@ -99,6 +117,8 @@ export function initialPrototypeState(): PrototypeState {
     mainlines: [],
     projects: [],
     milestones: [],
+    rewards: [],
+    redemptions: [],
     totalXp: 0,
     coinBalance: 0,
     transactions: [],
@@ -141,6 +161,8 @@ export function readPrototypeState(): PrototypeState {
       mainlines: parsed.mainlines ?? [],
       projects: parsed.projects ?? [],
       milestones: (parsed.milestones ?? []).map((milestone) => ({ ...milestone, questIds: milestone.questIds ?? [] })),
+      rewards: parsed.rewards ?? [],
+      redemptions: parsed.redemptions ?? [],
       quests: parsed.quests ?? initial.quests,
       transactions: parsed.transactions ?? [],
     };
@@ -260,6 +282,41 @@ export function getPrototypeMilestoneProgress(state: PrototypeState, milestone: 
   const total = milestone.questIds.length;
   const completed = milestone.questIds.filter((questId) => state.quests.some((quest) => quest.id === questId && quest.status === "completed")).length;
   return { total, completed, isCompleted: total > 0 && completed === total };
+}
+
+export function createPrototypeReward(state: PrototypeState, draft: Pick<PrototypeReward, "name" | "coinCost" | "isRepeatable">): PrototypeState {
+  const name = draft.name.trim();
+  const coinCost = Math.floor(draft.coinCost);
+  if (!name || !Number.isFinite(coinCost) || coinCost < 1) return state;
+
+  return {
+    ...state,
+    rewards: [{
+      id: crypto.randomUUID(),
+      name,
+      coinCost,
+      isRepeatable: draft.isRepeatable,
+      createdAt: new Date().toISOString(),
+    }, ...state.rewards],
+  };
+}
+
+export function redeemPrototypeReward(state: PrototypeState, rewardId: string): PrototypeState {
+  const reward = state.rewards.find((item) => item.id === rewardId);
+  if (!reward || state.coinBalance < reward.coinCost) return state;
+  if (!reward.isRepeatable && state.redemptions.some((redemption) => redemption.rewardId === rewardId)) return state;
+
+  return {
+    ...state,
+    coinBalance: state.coinBalance - reward.coinCost,
+    redemptions: [{
+      id: crypto.randomUUID(),
+      rewardId: reward.id,
+      rewardName: reward.name,
+      coinCost: reward.coinCost,
+      redeemedAt: new Date().toISOString(),
+    }, ...state.redemptions],
+  };
 }
 
 export function createPrototypeQuest(state: PrototypeState, draft: PrototypeQuestDraft): PrototypeState {
