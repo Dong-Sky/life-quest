@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { getCycleKey } from "./recurrence";
-import { createPrototypeProject, settlePrototypeQuest, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
+import { completePrototypeMilestone, createPrototypeMilestone, createPrototypeProject, settlePrototypeQuest, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
 
 function stateWithRecurringQuest(targetCount: number): PrototypeState {
   const cadence = targetCount === 1 ? "daily" : "weekly";
   return {
     mainlines: [],
     projects: [],
+    milestones: [],
     totalXp: 0,
     coinBalance: 0,
     transactions: [],
@@ -115,5 +116,28 @@ describe("quest editing", () => {
     expect(updated.totalXp).toBe(settled.totalXp);
     expect(updated.coinBalance).toBe(settled.coinBalance);
     expect(updated.transactions).toEqual(settled.transactions);
+  });
+});
+
+
+describe("project milestones", () => {
+  it("adds and completes a project milestone without creating rewards", () => {
+    const projectState = createPrototypeProject(stateWithRecurringQuest(1), {
+      name: "12 周减脂计划",
+      victoryCondition: "",
+    });
+    const created = createPrototypeMilestone(projectState, projectState.projects[0].id, "完成第一周训练安排");
+    const completed = completePrototypeMilestone(created, created.milestones[0].id);
+    const repeated = completePrototypeMilestone(completed, completed.milestones[0].id);
+
+    expect(created.milestones[0]).toMatchObject({
+      projectId: projectState.projects[0].id,
+      title: "完成第一周训练安排",
+      status: "open",
+    });
+    expect(completed.milestones[0].status).toBe("completed");
+    expect(completed.transactions).toEqual(created.transactions);
+    expect(completed.totalXp).toBe(created.totalXp);
+    expect(repeated).toBe(completed);
   });
 });
