@@ -18,7 +18,7 @@ const navigation: Array<{ href: string; label: string; icon: NavigationIconName 
   { href: "/friends", label: "伙伴", icon: "friends" },
 ];
 
-export function AppShell({ children, accountName, onSignOut }: { children: ReactNode; accountName?: string; onSignOut?: () => void }) {
+export function AppShell({ children, accountName, onSignOut, onResetWorkspace }: { children: ReactNode; accountName?: string; onSignOut?: () => void; onResetWorkspace?: () => void }) {
   const pathname = usePathname();
   const [pendingFriendCount, setPendingFriendCount] = useState(0);
 
@@ -60,7 +60,7 @@ export function AppShell({ children, accountName, onSignOut }: { children: React
 
       <div className="hidden lg:block"><WeeklyRhythmCard /></div>
 
-      {accountName ? <div className="mt-5 hidden rounded-xl border border-[var(--line)] bg-[#fbfbfb] p-3 lg:block"><p className="truncate text-xs text-[var(--muted)]" title={accountName}>当前用户：{accountName}</p>{onSignOut ? <button className="mt-2 text-xs font-medium text-[var(--muted)] transition hover:text-[var(--ink)]" onClick={onSignOut} type="button">退出登录</button> : null}</div> : null}
+      {accountName ? <div className="mt-5 hidden rounded-xl border border-[var(--line)] bg-[#fbfbfb] p-3 lg:block"><p className="truncate text-xs text-[var(--muted)]" title={accountName}>当前用户：{accountName}</p><div className="mt-2 flex items-center gap-3">{onSignOut ? <button className="text-xs font-medium text-[var(--muted)] transition hover:text-[var(--ink)]" onClick={onSignOut} type="button">退出登录</button> : null}{onResetWorkspace ? <button className="text-xs font-medium text-[var(--muted)] underline-offset-2 transition hover:text-red-600 hover:underline" onClick={onResetWorkspace} type="button">重新开始工作台</button> : null}</div></div> : null}
     </aside>
     <main className="min-w-0 pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</main>
     <nav aria-label="手机主导航" className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--line)] bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-8px_24px_rgba(31,35,40,0.05)] backdrop-blur lg:hidden">
