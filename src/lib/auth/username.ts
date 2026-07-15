@@ -20,5 +20,5 @@ export function usernameToAuthEmail(username: string) {
   }
 
   const encoded = btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
-  return `user.${encoded}@users.questline.local`;
+  return `user.${encoded}@users.questline.app`;
 }
