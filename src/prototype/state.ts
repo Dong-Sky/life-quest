@@ -5,7 +5,6 @@ import type { Difficulty, Importance, QuestReward, QuestType, Resistance } from 
 export type QuestStatus = "open" | "completed";
 export type MainlineStatus = "active";
 export type ProjectStatus = "active";
-export type MilestoneStatus = "open" | "completed";
 
 export interface PrototypeMainline {
   id: string;
@@ -29,9 +28,14 @@ export interface PrototypeMilestone {
   id: string;
   projectId: string;
   title: string;
-  status: MilestoneStatus;
+  questIds: string[];
   createdAt: string;
-  completedAt?: string;
+}
+
+export interface PrototypeMilestoneProgress {
+  total: number;
+  completed: number;
+  isCompleted: boolean;
 }
 
 export interface PrototypeQuest {
@@ -136,7 +140,7 @@ export function readPrototypeState(): PrototypeState {
       ...parsed,
       mainlines: parsed.mainlines ?? [],
       projects: parsed.projects ?? [],
-      milestones: parsed.milestones ?? [],
+      milestones: (parsed.milestones ?? []).map((milestone) => ({ ...milestone, questIds: milestone.questIds ?? [] })),
       quests: parsed.quests ?? initial.quests,
       transactions: parsed.transactions ?? [],
     };
@@ -216,7 +220,12 @@ export function updatePrototypeProject(state: PrototypeState, id: string, draft:
   };
 }
 
-export function createPrototypeMilestone(state: PrototypeState, projectId: string, title: string): PrototypeState {
+function validMilestoneQuestIds(state: PrototypeState, projectId: string, questIds: string[]): string[] {
+  const availableIds = new Set(state.quests.filter((quest) => quest.projectId === projectId).map((quest) => quest.id));
+  return [...new Set(questIds)].filter((questId) => availableIds.has(questId));
+}
+
+export function createPrototypeMilestone(state: PrototypeState, projectId: string, title: string, questIds: string[] = []): PrototypeState {
   const trimmedTitle = title.trim();
   if (!trimmedTitle || !state.projects.some((project) => project.id === projectId)) return state;
 
@@ -226,25 +235,31 @@ export function createPrototypeMilestone(state: PrototypeState, projectId: strin
       id: crypto.randomUUID(),
       projectId,
       title: trimmedTitle,
-      status: "open",
+      questIds: validMilestoneQuestIds(state, projectId, questIds),
       createdAt: new Date().toISOString(),
     }, ...state.milestones],
   };
 }
 
-export function completePrototypeMilestone(state: PrototypeState, id: string): PrototypeState {
+export function updatePrototypeMilestone(state: PrototypeState, id: string, title: string, questIds: string[]): PrototypeState {
   const milestone = state.milestones.find((item) => item.id === id);
-  if (!milestone || milestone.status === "completed") return state;
+  const trimmedTitle = title.trim();
+  if (!milestone || !trimmedTitle) return state;
 
-  const completedAt = new Date().toISOString();
   return {
     ...state,
     milestones: state.milestones.map((item) => item.id === id ? {
       ...item,
-      status: "completed",
-      completedAt,
+      title: trimmedTitle,
+      questIds: validMilestoneQuestIds(state, item.projectId, questIds),
     } : item),
   };
+}
+
+export function getPrototypeMilestoneProgress(state: PrototypeState, milestone: PrototypeMilestone): PrototypeMilestoneProgress {
+  const total = milestone.questIds.length;
+  const completed = milestone.questIds.filter((questId) => state.quests.some((quest) => quest.id === questId && quest.status === "completed")).length;
+  return { total, completed, isCompleted: total > 0 && completed === total };
 }
 
 export function createPrototypeQuest(state: PrototypeState, draft: PrototypeQuestDraft): PrototypeState {
