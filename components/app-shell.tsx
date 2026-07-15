@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WeeklyRhythmCard } from "@/components/weekly-rhythm-card";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/src/lib/supabase/client";
+import { FRIENDSHIP_STATE_EVENT } from "@/src/lib/friends/events";
 
 type NavigationIconName = "today" | "quests" | "mainlines" | "rewards" | "projects" | "reviews" | "friends";
 
@@ -41,8 +42,16 @@ export function AppShell({ children, accountName, onSignOut, onResetWorkspace }:
       if (active) setPendingFriendCount(count ?? 0);
     }
 
+    function handleFriendshipStateChanged() {
+      void loadPendingFriendCount();
+    }
+
+    window.addEventListener(FRIENDSHIP_STATE_EVENT, handleFriendshipStateChanged);
     void loadPendingFriendCount();
-    return () => { active = false; };
+    return () => {
+      active = false;
+      window.removeEventListener(FRIENDSHIP_STATE_EVENT, handleFriendshipStateChanged);
+    };
   }, []);
 
   return <div className="min-h-screen bg-[var(--canvas)] lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
