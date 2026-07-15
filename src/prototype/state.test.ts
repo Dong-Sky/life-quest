@@ -143,25 +143,28 @@ describe("reward store", () => {
 
 
 describe("weekly settlement", () => {
-  it("summarizes current-week settlements and creates next actions as real quests once", () => {
-    const now = new Date("2026-07-15T09:00:00.000Z");
-    const settled = settlePrototypeQuest(stateWithRecurringQuest(1), "recurring-quest");
-    const summary = getPrototypeWeeklyReviewSummary(settled, now);
-    const planned = createPrototypeWeeklyPlan(settled, now, [
-      { title: "准备下周汇报", questType: "focus", difficulty: "hard", importance: "goal", resistance: "procrastinated", mainlineId: "career" },
+  it("rolls to the current week while keeping a prior week's real settlement available", () => {
+    const lastWeek = new Date("2026-07-08T09:00:00.000Z");
+    const thisWeek = new Date("2026-07-15T09:00:00.000Z");
+    const settled = settlePrototypeQuest(stateWithRecurringQuest(1), "recurring-quest", lastWeek);
+    const priorSummary = getPrototypeWeeklyReviewSummary(settled, lastWeek);
+    const currentSummary = getPrototypeWeeklyReviewSummary(settled, thisWeek);
+    const planned = createPrototypeWeeklyPlan(settled, thisWeek, [
+      { title: "准备下周汇报", questType: "focus", difficulty: "hard", importance: "goal", resistance: "procrastinated", mainlineId: "career", projectId: "report-project" },
       { title: "", questType: "standard", difficulty: "standard", importance: "helpful", resistance: "none" },
-      { title: "安排三次训练", questType: "standard", difficulty: "standard", importance: "helpful", resistance: "none", mainlineId: "health" },
+      { title: "安排三次训练", questType: "standard", difficulty: "standard", importance: "helpful", resistance: "none", mainlineId: "health", projectId: "fitness-project" },
     ]);
-    const repeated = createPrototypeWeeklyPlan(planned, now, [
+    const repeated = createPrototypeWeeklyPlan(planned, thisWeek, [
       { title: "准备下周汇报", questType: "focus", difficulty: "hard", importance: "goal", resistance: "procrastinated" },
     ]);
 
-    expect(summary).toMatchObject({ completedQuests: 1, xpEarned: settled.totalXp, coinsEarned: settled.coinBalance });
+    expect(priorSummary).toMatchObject({ completedQuests: 1, xpEarned: settled.totalXp, coinsEarned: settled.coinBalance });
+    expect(currentSummary).toMatchObject({ completedQuests: 0, xpEarned: 0, coinsEarned: 0 });
     expect(planned.weeklyPlans).toHaveLength(1);
     expect(planned.weeklyPlans[0].questIds).toHaveLength(2);
     expect(planned.quests.slice(0, 2).map((quest) => quest.title)).toEqual(["准备下周汇报", "安排三次训练"]);
-    expect(planned.quests[0]).toMatchObject({ status: "open", questType: "focus", difficulty: "hard", importance: "goal", resistance: "procrastinated", mainlineId: "career" });
-    expect(planned.quests[1]).toMatchObject({ status: "open", mainlineId: "health" });
+    expect(planned.quests[0]).toMatchObject({ status: "open", questType: "focus", difficulty: "hard", importance: "goal", resistance: "procrastinated", mainlineId: "career", projectId: "report-project" });
+    expect(planned.quests[1]).toMatchObject({ status: "open", mainlineId: "health", projectId: "fitness-project" });
     expect(repeated).toBe(planned);
   });
 });
