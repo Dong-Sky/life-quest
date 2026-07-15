@@ -2,7 +2,9 @@
 
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { useEffect, useState, type ReactNode } from "react";
-import { hydratePrototypeState, PROTOTYPE_STATE_EVENT, readPrototypeState, type PrototypeState, writePrototypeState } from "@/src/prototype/state";
+import { hydratePrototypeState, initialPrototypeState, PROTOTYPE_STATE_EVENT, readPrototypeState, type PrototypeState, writePrototypeState } from "@/src/prototype/state";
+
+const ACTIVE_WORKSPACE_USER_KEY = "questline:active-workspace-user";
 
 type CloudStateBridgeProps = {
   children: ReactNode;
@@ -42,6 +44,8 @@ export function CloudStateBridge({ children, supabase, user }: CloudStateBridgeP
 
     async function initialize() {
       try {
+        const previousWorkspaceUser = window.localStorage.getItem(ACTIVE_WORKSPACE_USER_KEY);
+        const belongsToCurrentUser = !previousWorkspaceUser || previousWorkspaceUser === user.id;
         const { data, error } = await supabase
           .from("workspace_states")
           .select("state")
@@ -53,9 +57,14 @@ export function CloudStateBridge({ children, supabase, user }: CloudStateBridgeP
         if (data?.state && typeof data.state === "object") {
           writePrototypeState(hydratePrototypeState(data.state as Partial<PrototypeState>));
         } else {
-          await persist(readPrototypeState());
+          // A shared browser can contain a previous person's local prototype.
+          // Only the first account on a device may import that legacy local data.
+          const initialState = belongsToCurrentUser ? readPrototypeState() : initialPrototypeState();
+          writePrototypeState(initialState);
+          await persist(initialState);
         }
 
+        window.localStorage.setItem(ACTIVE_WORKSPACE_USER_KEY, user.id);
         if (active) setStatus("ready");
       } catch (error) {
         if (active) {
