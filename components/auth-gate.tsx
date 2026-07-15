@@ -16,13 +16,10 @@ export function AuthGate({ children }: AuthGateProps) {
   const configured = isSupabaseConfigured();
   const supabase = useMemo(() => (configured ? createSupabaseBrowserClient() : null), [configured]);
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(supabase));
 
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
+    if (!supabase) return;
 
     const client = supabase;
     let active = true;
