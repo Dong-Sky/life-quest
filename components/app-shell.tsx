@@ -10,7 +10,7 @@ const navigation = [
   { href: "/mainlines", label: "主线", icon: "↗" },
   { href: "/rewards", label: "奖励商城", icon: "✦" },
   { href: "/projects", label: "副本", icon: "◇" },
-  { href: "#", label: "周结算", icon: "◫", disabled: true },
+  { href: "/reviews", label: "周结算", icon: "◫" },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
