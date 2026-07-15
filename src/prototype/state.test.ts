@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getCycleKey } from "./recurrence";
-import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, createPrototypeWeeklyPlan, getPrototypeMilestoneProgress, getPrototypeWeeklyReviewSummary, getPrototypeWeeklyRhythm, redeemPrototypeReward, settlePrototypeQuest, togglePrototypeRewardWishlist, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
+import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, createPrototypeWeeklyPlan, getPrototypeMilestoneProgress, getPrototypeWeeklyReviewSummary, getPrototypeWeeklyRhythm, hydratePrototypeState, redeemPrototypeReward, settlePrototypeQuest, togglePrototypeRewardWishlist, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
 
 function stateWithRecurringQuest(targetCount: number): PrototypeState {
   const cadence = targetCount === 1 ? "daily" : "weekly";
@@ -185,5 +185,39 @@ describe("weekly rhythm", () => {
     expect(rhythm.nextQuest?.title).toBe("完成重要汇报");
     expect(rhythm.topWish?.name).toBe("周末旅行升级");
     expect(rhythm.missingCoins).toBe(20);
+  });
+});
+
+
+describe("cloud workspace hydration", () => {
+  it("fills in collections that were not present in an older saved workspace", () => {
+    const state = hydratePrototypeState({
+      totalXp: 42,
+      coinBalance: 7,
+      quests: [],
+    });
+
+    expect(state.totalXp).toBe(42);
+    expect(state.coinBalance).toBe(7);
+    expect(state.mainlines).toEqual([]);
+    expect(state.rewards).toEqual([]);
+    expect(state.quests).toEqual([]);
+  });
+
+  it("keeps a saved wishlist entry usable after hydration", () => {
+    const state = hydratePrototypeState({
+      rewards: [{
+        id: "reward-1",
+        name: "庆祝晚餐",
+        coinCost: 100,
+        isRepeatable: true,
+        isWishlisted: true,
+        wishlistedAt: "2026-07-15T00:00:00.000Z",
+        createdAt: "2026-07-15T00:00:00.000Z",
+      }],
+      quests: [],
+    });
+
+    expect(state.rewards[0].isWishlisted).toBe(true);
   });
 });

@@ -197,32 +197,34 @@ export function refreshPrototypeStateForCurrentCycle(state: PrototypeState, now 
   return changed ? { ...state, quests } : state;
 }
 
+export function hydratePrototypeState(parsed: Partial<PrototypeState>): PrototypeState {
+  const initial = initialPrototypeState();
+  const hydrated = {
+    ...initial,
+    ...parsed,
+    mainlines: parsed.mainlines ?? [],
+    projects: parsed.projects ?? [],
+    milestones: (parsed.milestones ?? []).map((milestone) => ({ ...milestone, questIds: milestone.questIds ?? [] })),
+    rewards: (parsed.rewards ?? []).map((reward) => ({
+      ...reward,
+      isWishlisted: reward.isWishlisted ?? false,
+    })),
+    redemptions: parsed.redemptions ?? [],
+    reviews: parsed.reviews ?? [],
+    weeklyPlans: parsed.weeklyPlans ?? [],
+    quests: parsed.quests ?? initial.quests,
+    transactions: parsed.transactions ?? [],
+  };
+  return refreshPrototypeStateForCurrentCycle(hydrated);
+}
+
 export function readPrototypeState(): PrototypeState {
   try {
     const stored = window.localStorage.getItem(PROTOTYPE_KEY);
     if (!stored) return initialPrototypeState();
 
-    const initial = initialPrototypeState();
-    const parsed = JSON.parse(stored) as Partial<PrototypeState>;
-    const hydrated = {
-      ...initial,
-      ...parsed,
-      mainlines: parsed.mainlines ?? [],
-      projects: parsed.projects ?? [],
-      milestones: (parsed.milestones ?? []).map((milestone) => ({ ...milestone, questIds: milestone.questIds ?? [] })),
-      rewards: (parsed.rewards ?? []).map((reward) => ({
-        ...reward,
-        isWishlisted: reward.isWishlisted ?? false,
-      })),
-      redemptions: parsed.redemptions ?? [],
-      reviews: parsed.reviews ?? [],
-      weeklyPlans: parsed.weeklyPlans ?? [],
-      quests: parsed.quests ?? initial.quests,
-      transactions: parsed.transactions ?? [],
-    };
-    const refreshed = refreshPrototypeStateForCurrentCycle(hydrated);
-    if (refreshed !== hydrated) writePrototypeState(refreshed);
-    return refreshed;
+    const hydrated = hydratePrototypeState(JSON.parse(stored) as Partial<PrototypeState>);
+    return hydrated;
   } catch {
     return initialPrototypeState();
   }

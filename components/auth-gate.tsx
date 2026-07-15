@@ -3,6 +3,7 @@
 import type { User } from "@supabase/supabase-js";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
+import { CloudStateBridge } from "@/components/cloud-state-bridge";
 import { isValidUsername, normalizeUsername, usernameToAuthEmail } from "@/src/lib/auth/username";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/src/lib/supabase/client";
 
@@ -64,7 +65,7 @@ export function AuthGate({ children }: AuthGateProps) {
     ? user.user_metadata.display_name
     : "已登录用户";
 
-  return <AppShell accountName={displayName} onSignOut={() => void supabase.auth.signOut()}>{children}</AppShell>;
+  return <CloudStateBridge supabase={supabase} user={user}><AppShell accountName={displayName} onSignOut={() => void supabase.auth.signOut()}>{children}</AppShell></CloudStateBridge>;
 }
 
 function LoadingScreen() {
