@@ -499,13 +499,13 @@ export function updatePrototypeQuest(state: PrototypeState, id: string, draft: P
   };
 }
 
-export function settlePrototypeQuest(state: PrototypeState, id: string): PrototypeState {
-  const refreshed = refreshPrototypeStateForCurrentCycle(state);
+export function settlePrototypeQuest(state: PrototypeState, id: string, now = new Date()): PrototypeState {
+  const refreshed = refreshPrototypeStateForCurrentCycle(state, now);
   const quest = refreshed.quests.find((item) => item.id === id);
   if (!quest || quest.status === "completed") return refreshed;
 
   const reward = calculateQuestReward(quest);
-  const createdAt = new Date().toISOString();
+  const createdAt = now.toISOString();
   const transaction: PrototypeTransaction = {
     id: crypto.randomUUID(),
     questId: quest.id,
