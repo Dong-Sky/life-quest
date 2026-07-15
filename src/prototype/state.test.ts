@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getCycleKey } from "./recurrence";
-import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, createPrototypeWeeklyPlan, getPrototypeMilestoneProgress, getPrototypeWeeklyReviewSummary, redeemPrototypeReward, settlePrototypeQuest, togglePrototypeRewardWishlist, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
+import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, createPrototypeWeeklyPlan, getPrototypeMilestoneProgress, getPrototypeWeeklyReviewSummary, getPrototypeWeeklyRhythm, redeemPrototypeReward, settlePrototypeQuest, togglePrototypeRewardWishlist, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
 
 function stateWithRecurringQuest(targetCount: number): PrototypeState {
   const cadence = targetCount === 1 ? "daily" : "weekly";
@@ -166,5 +166,24 @@ describe("weekly settlement", () => {
     expect(planned.quests[0]).toMatchObject({ status: "open", questType: "focus", difficulty: "hard", importance: "goal", resistance: "procrastinated", mainlineId: "career", projectId: "report-project" });
     expect(planned.quests[1]).toMatchObject({ status: "open", mainlineId: "health", projectId: "fitness-project" });
     expect(repeated).toBe(planned);
+  });
+});
+
+describe("weekly rhythm", () => {
+  it("surfaces the highest-value open quest and the current top wish", () => {
+    const base = stateWithRecurringQuest(1);
+    const withQuests: PrototypeState = {
+      ...base,
+      quests: [
+        { ...base.quests[0], id: "standard", title: "整理邮件", recurrence: undefined, questType: "standard", importance: "helpful" },
+        { ...base.quests[0], id: "boss", title: "完成重要汇报", recurrence: undefined, questType: "boss", importance: "critical" },
+      ],
+    };
+    const withWish = createPrototypeReward(withQuests, { name: "周末旅行升级", coinCost: 20, isRepeatable: true, isWishlisted: true });
+    const rhythm = getPrototypeWeeklyRhythm(withWish, new Date("2026-07-15T09:00:00.000Z"));
+
+    expect(rhythm.nextQuest?.title).toBe("完成重要汇报");
+    expect(rhythm.topWish?.name).toBe("周末旅行升级");
+    expect(rhythm.missingCoins).toBe(20);
   });
 });

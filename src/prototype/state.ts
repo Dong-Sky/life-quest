@@ -157,6 +157,7 @@ export interface PrototypeState {
 }
 
 export const PROTOTYPE_KEY = "life-quest-prototype-v1";
+export const PROTOTYPE_STATE_EVENT = "life-quest:state-updated";
 
 export function initialPrototypeState(): PrototypeState {
   return {
@@ -229,6 +230,7 @@ export function readPrototypeState(): PrototypeState {
 
 export function writePrototypeState(state: PrototypeState) {
   window.localStorage.setItem(PROTOTYPE_KEY, JSON.stringify(state));
+  window.dispatchEvent(new Event(PROTOTYPE_STATE_EVENT));
 }
 
 export function getPrototypeWeekKey(date = new Date()): string {
@@ -284,6 +286,31 @@ export function createPrototypeWeeklyPlan(state: PrototypeState, now: Date, draf
     ...state,
     quests: [...quests, ...state.quests],
     weeklyPlans: [plan, ...state.weeklyPlans],
+  };
+}
+
+export interface PrototypeWeeklyRhythm {
+  summary: PrototypeWeeklyReviewSummary;
+  nextQuest?: PrototypeQuest;
+  topWish?: PrototypeReward;
+  missingCoins?: number;
+}
+
+export function getPrototypeWeeklyRhythm(state: PrototypeState, now = new Date()): PrototypeWeeklyRhythm {
+  const urgency: Record<QuestType, number> = { micro: 1, standard: 2, focus: 3, milestone: 4, boss: 5 };
+  const importance: Record<Importance, number> = { maintenance: 1, helpful: 2, goal: 3, critical: 4 };
+  const nextQuest = [...state.quests]
+    .filter((quest) => quest.status === "open")
+    .sort((left, right) => urgency[right.questType] * 10 + importance[right.importance] - (urgency[left.questType] * 10 + importance[left.importance]))[0];
+  const topWish = [...state.rewards]
+    .filter((reward) => reward.isWishlisted)
+    .sort((left, right) => (right.wishlistedAt ?? "").localeCompare(left.wishlistedAt ?? ""))[0];
+
+  return {
+    summary: getPrototypeWeeklyReviewSummary(state, now),
+    nextQuest,
+    topWish,
+    missingCoins: topWish ? Math.max(topWish.coinCost - state.coinBalance, 0) : undefined,
   };
 }
 
