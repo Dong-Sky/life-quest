@@ -1,11 +1,12 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WeeklyRhythmCard } from "@/components/weekly-rhythm-card";
+import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/src/lib/supabase/client";
 
-type NavigationIconName = "today" | "quests" | "mainlines" | "rewards" | "projects" | "reviews";
+type NavigationIconName = "today" | "quests" | "mainlines" | "rewards" | "projects" | "reviews" | "friends";
 
 const navigation: Array<{ href: string; label: string; icon: NavigationIconName }> = [
   { href: "/dashboard", label: "今日", icon: "today" },
@@ -14,10 +15,35 @@ const navigation: Array<{ href: string; label: string; icon: NavigationIconName 
   { href: "/rewards", label: "奖励", icon: "rewards" },
   { href: "/projects", label: "副本", icon: "projects" },
   { href: "/reviews", label: "结算", icon: "reviews" },
+  { href: "/friends", label: "伙伴", icon: "friends" },
 ];
 
 export function AppShell({ children, accountName, onSignOut }: { children: ReactNode; accountName?: string; onSignOut?: () => void }) {
   const pathname = usePathname();
+  const [pendingFriendCount, setPendingFriendCount] = useState(0);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    const supabase = createSupabaseBrowserClient();
+    let active = true;
+
+    async function loadPendingFriendCount() {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+
+      const { count } = await supabase
+        .from("friendships")
+        .select("id", { count: "exact", head: true })
+        .eq("addressee_id", userData.user.id)
+        .eq("status", "pending");
+
+      if (active) setPendingFriendCount(count ?? 0);
+    }
+
+    void loadPendingFriendCount();
+    return () => { active = false; };
+  }, []);
 
   return <div className="min-h-screen bg-[var(--canvas)] lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
     <aside className="border-b border-[var(--line)] bg-white px-4 py-3 lg:min-h-screen lg:border-b-0 lg:border-r lg:px-4 lg:py-4">
@@ -29,7 +55,7 @@ export function AppShell({ children, accountName, onSignOut }: { children: React
       </div>
 
       <nav aria-label="主导航" className="hidden lg:flex lg:flex-col lg:gap-1">
-        {navigation.map((item) => <NavigationLink item={item} active={pathname === item.href} key={item.href} />)}
+        {navigation.map((item) => <NavigationLink item={item} active={pathname === item.href} key={item.href} pendingCount={item.icon === "friends" ? pendingFriendCount : 0} />)}
       </nav>
 
       <div className="hidden lg:block"><WeeklyRhythmCard /></div>
@@ -38,16 +64,27 @@ export function AppShell({ children, accountName, onSignOut }: { children: React
     </aside>
     <main className="min-w-0 pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</main>
     <nav aria-label="手机主导航" className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--line)] bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-8px_24px_rgba(31,35,40,0.05)] backdrop-blur lg:hidden">
-      <div className="grid grid-cols-6">{navigation.map((item) => {
+      <div className="grid grid-cols-7">{navigation.map((item) => {
         const active = pathname === item.href;
-        return <Link aria-current={active ? "page" : undefined} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-medium transition ${active ? "text-[var(--accent)]" : "text-[var(--muted)]"}`} href={item.href} key={item.href}><NavigationIcon name={item.icon} /><span>{item.label}</span></Link>;
+        const pendingCount = item.icon === "friends" ? pendingFriendCount : 0;
+        return <Link aria-current={active ? "page" : undefined} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-medium transition ${active ? "text-[var(--accent)]" : "text-[var(--muted)]"}`} href={item.href} key={item.href}>
+          <span className="relative"><NavigationIcon name={item.icon} />{pendingCount ? <PendingBadge count={pendingCount} /> : null}</span>
+          <span>{item.label}</span>
+        </Link>;
       })}</div>
     </nav>
   </div>;
 }
 
-function NavigationLink({ item, active }: { item: (typeof navigation)[number]; active: boolean }) {
-  return <Link aria-current={active ? "page" : undefined} className={`group flex min-w-fit items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-[var(--accent-soft)] font-medium text-[var(--accent)] shadow-[inset_3px_0_0_var(--accent)]" : "text-[var(--muted)] hover:bg-[#f7f7f8] hover:text-[var(--ink)]"}`} href={item.href}><NavigationIcon name={item.icon} /><span>{item.label}</span></Link>;
+function NavigationLink({ item, active, pendingCount }: { item: (typeof navigation)[number]; active: boolean; pendingCount: number }) {
+  return <Link aria-current={active ? "page" : undefined} className={`group flex min-w-fit items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-[var(--accent-soft)] font-medium text-[var(--accent)] shadow-[inset_3px_0_0_var(--accent)]" : "text-[var(--muted)] hover:bg-[#f7f7f8] hover:text-[var(--ink)]"}`} href={item.href}>
+    <span className="relative"><NavigationIcon name={item.icon} />{pendingCount ? <PendingBadge count={pendingCount} /> : null}</span>
+    <span>{item.label}</span>
+  </Link>;
+}
+
+function PendingBadge({ count }: { count: number }) {
+  return <span aria-label={`${count} 个待确认好友请求`} className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full border-2 border-white bg-rose-500 px-0.5 text-[9px] font-semibold leading-none text-white">{count > 9 ? "9+" : count}</span>;
 }
 
 function BrandMark() {
@@ -63,6 +100,7 @@ function NavigationIcon({ name }: { name: NavigationIconName }) {
     rewards: <><path d="m12 4 1.9 4.1L18 10l-4.1 1.9L12 16l-1.9-4.1L6 10l4.1-.9L12 4Z" {...common} /><path d="m18 15 .9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9L18 15Z" {...common} /></>,
     projects: <><path d="m12 4 6.5 3.8v8.4L12 20 5.5 16.2V7.8L12 4Z" {...common} /><path d="m5.8 7.9 6.2 3.6 6.2-3.6M12 11.5V20" {...common} /></>,
     reviews: <><path d="M7 4.5h10v15H7z" {...common} /><path d="M10 8h4M10 12h4M10 16h2" {...common} /><path d="m5 8-1.5 1.5L5 11" {...common} /></>,
+    friends: <><circle cx="9" cy="9" r="3" {...common} /><circle cx="17" cy="10" r="2.3" {...common} /><path d="M3.8 20c.7-3.3 3-5 5.2-5s4.5 1.7 5.2 5" {...common} /><path d="M14.5 15.7c2.7.2 4.7 1.6 5.2 4.3" {...common} /></>,
   };
   return <svg aria-hidden="true" className="h-[18px] w-[18px] shrink-0 transition group-hover:scale-105" viewBox="0 0 24 24">{paths[name]}</svg>;
 }
