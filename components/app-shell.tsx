@@ -16,7 +16,7 @@ const navigation: Array<{ href: string; label: string; icon: NavigationIconName 
   { href: "/reviews", label: "周结算", icon: "reviews" },
 ];
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, accountName, onSignOut }: { children: ReactNode; accountName?: string; onSignOut?: () => void }) {
   const pathname = usePathname();
 
   return <div className="min-h-screen bg-[var(--canvas)] lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
@@ -34,6 +34,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
 
       <WeeklyRhythmCard />
+
+      {accountName ? <div className="mt-5 rounded-xl border border-[var(--line)] bg-[#fbfbfb] p-3"><p className="truncate text-xs text-[var(--muted)]" title={accountName}>当前用户：{accountName}</p>{onSignOut ? <button className="mt-2 text-xs font-medium text-[var(--muted)] transition hover:text-[var(--ink)]" onClick={onSignOut} type="button">退出登录</button> : null}</div> : null}
     </aside>
     <main className="min-w-0">{children}</main>
   </div>;
