@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getCycleKey } from "./recurrence";
-import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, getPrototypeMilestoneProgress, redeemPrototypeReward, settlePrototypeQuest, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
+import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, getPrototypeMilestoneProgress, getPrototypeWeeklyReviewSummary, redeemPrototypeReward, settlePrototypeQuest, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, upsertPrototypeWeeklyReview, type PrototypeState } from "./state";
 
 function stateWithRecurringQuest(targetCount: number): PrototypeState {
   const cadence = targetCount === 1 ? "daily" : "weekly";
@@ -10,6 +10,7 @@ function stateWithRecurringQuest(targetCount: number): PrototypeState {
     milestones: [],
     rewards: [],
     redemptions: [],
+    reviews: [],
     totalXp: 0,
     coinBalance: 0,
     transactions: [],
@@ -134,5 +135,21 @@ describe("reward store", () => {
     expect(redeemed.redemptions[0]).toMatchObject({ rewardName: "看一部电影", coinCost: 1 });
     expect(repeated).toBe(redeemed);
     expect(insufficient).toBe(expensive);
+  });
+});
+
+
+describe("weekly review", () => {
+  it("summarizes current-week settlements and saves one review per week", () => {
+    const now = new Date("2026-07-15T09:00:00.000Z");
+    const settled = settlePrototypeQuest(stateWithRecurringQuest(1), "recurring-quest");
+    const summary = getPrototypeWeeklyReviewSummary(settled, now);
+    const first = upsertPrototypeWeeklyReview(settled, now, { wins: "完成运动", blockers: "下班较晚", nextPriorities: ["安排训练", "准备餐食", ""] });
+    const second = upsertPrototypeWeeklyReview(first, now, { wins: "保持行动", blockers: "", nextPriorities: ["复盘计划"] });
+
+    expect(summary).toMatchObject({ completedQuests: 1, xpEarned: settled.totalXp, coinsEarned: settled.coinBalance });
+    expect(first.reviews[0]).toMatchObject({ wins: "完成运动", nextPriorities: ["安排训练", "准备餐食"] });
+    expect(second.reviews).toHaveLength(1);
+    expect(second.reviews[0]).toMatchObject({ wins: "保持行动", nextPriorities: ["复盘计划"] });
   });
 });
