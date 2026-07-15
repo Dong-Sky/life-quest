@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getCycleKey } from "./recurrence";
-import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, getPrototypeMilestoneProgress, getPrototypeWeeklyReviewSummary, redeemPrototypeReward, settlePrototypeQuest, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, upsertPrototypeWeeklyReview, type PrototypeState } from "./state";
+import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, createPrototypeWeeklyPlan, getPrototypeMilestoneProgress, getPrototypeWeeklyReviewSummary, redeemPrototypeReward, settlePrototypeQuest, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
 
 function stateWithRecurringQuest(targetCount: number): PrototypeState {
   const cadence = targetCount === 1 ? "daily" : "weekly";
@@ -11,6 +11,7 @@ function stateWithRecurringQuest(targetCount: number): PrototypeState {
     rewards: [],
     redemptions: [],
     reviews: [],
+    weeklyPlans: [],
     totalXp: 0,
     coinBalance: 0,
     transactions: [],
@@ -139,17 +140,19 @@ describe("reward store", () => {
 });
 
 
-describe("weekly review", () => {
-  it("summarizes current-week settlements and saves one review per week", () => {
+describe("weekly settlement", () => {
+  it("summarizes current-week settlements and creates next actions as real quests once", () => {
     const now = new Date("2026-07-15T09:00:00.000Z");
     const settled = settlePrototypeQuest(stateWithRecurringQuest(1), "recurring-quest");
     const summary = getPrototypeWeeklyReviewSummary(settled, now);
-    const first = upsertPrototypeWeeklyReview(settled, now, { wins: "完成运动", blockers: "下班较晚", nextPriorities: ["安排训练", "准备餐食", ""] });
-    const second = upsertPrototypeWeeklyReview(first, now, { wins: "保持行动", blockers: "", nextPriorities: ["复盘计划"] });
+    const planned = createPrototypeWeeklyPlan(settled, now, ["准备下周汇报", "", "安排三次训练"]);
+    const repeated = createPrototypeWeeklyPlan(planned, now, ["准备下周汇报", "安排三次训练"]);
 
     expect(summary).toMatchObject({ completedQuests: 1, xpEarned: settled.totalXp, coinsEarned: settled.coinBalance });
-    expect(first.reviews[0]).toMatchObject({ wins: "完成运动", nextPriorities: ["安排训练", "准备餐食"] });
-    expect(second.reviews).toHaveLength(1);
-    expect(second.reviews[0]).toMatchObject({ wins: "保持行动", nextPriorities: ["复盘计划"] });
+    expect(planned.weeklyPlans).toHaveLength(1);
+    expect(planned.weeklyPlans[0].questIds).toHaveLength(2);
+    expect(planned.quests.slice(0, 2).map((quest) => quest.title)).toEqual(["准备下周汇报", "安排三次训练"]);
+    expect(planned.quests.slice(0, 2).every((quest) => quest.status === "open")).toBe(true);
+    expect(repeated).toBe(planned);
   });
 });
