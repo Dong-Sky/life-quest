@@ -63,6 +63,7 @@ export function AuthGate({ children }: AuthGateProps) {
   }
 
   const authenticatedSupabase = supabase;
+  const authenticatedUser = user;
   const displayName = typeof user.user_metadata.display_name === "string" && user.user_metadata.display_name.trim()
     ? user.user_metadata.display_name
     : "已登录用户";
@@ -73,7 +74,7 @@ export function AuthGate({ children }: AuthGateProps) {
     const initialState = initialPrototypeState();
     const { error } = await authenticatedSupabase
       .from("workspace_states")
-      .upsert({ user_id: user.id, state: initialState }, { onConflict: "user_id" });
+      .upsert({ user_id: authenticatedUser.id, state: initialState }, { onConflict: "user_id" });
 
     if (error) {
       window.alert(`无法清空当前工作台：${error.message}`);
@@ -84,7 +85,7 @@ export function AuthGate({ children }: AuthGateProps) {
     window.location.reload();
   }
 
-  return <CloudStateBridge key={user.id} supabase={authenticatedSupabase} user={user}><AppShell accountName={displayName} onResetWorkspace={() => void resetWorkspace()} onSignOut={() => void supabase.auth.signOut()}>{children}</AppShell></CloudStateBridge>;
+  return <CloudStateBridge key={authenticatedUser.id} supabase={authenticatedSupabase} user={authenticatedUser}><AppShell accountName={displayName} onResetWorkspace={() => void resetWorkspace()} onSignOut={() => void supabase.auth.signOut()}>{children}</AppShell></CloudStateBridge>;
 }
 
 function LoadingScreen() {
