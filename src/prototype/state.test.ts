@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getCycleKey } from "./recurrence";
-import { createPrototypeMilestone, createPrototypeProject, getPrototypeMilestoneProgress, settlePrototypeQuest, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
+import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, getPrototypeMilestoneProgress, redeemPrototypeReward, settlePrototypeQuest, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
 
 function stateWithRecurringQuest(targetCount: number): PrototypeState {
   const cadence = targetCount === 1 ? "daily" : "weekly";
@@ -8,6 +8,8 @@ function stateWithRecurringQuest(targetCount: number): PrototypeState {
     mainlines: [],
     projects: [],
     milestones: [],
+    rewards: [],
+    redemptions: [],
     totalXp: 0,
     coinBalance: 0,
     transactions: [],
@@ -115,5 +117,22 @@ describe("automatic project milestones", () => {
     expect(afterSettlement).toMatchObject({ total: 1, completed: 1, isCompleted: true });
     expect(edited.milestones[0]).toMatchObject({ title: "完成第一周训练与复盘", questIds: ["recurring-quest"] });
     expect(settled.transactions).toHaveLength(1);
+  });
+});
+
+
+describe("reward store", () => {
+  it("redeems a custom reward once without allowing a negative balance or duplicate one-time redemption", () => {
+    const settled = settlePrototypeQuest(stateWithRecurringQuest(1), "recurring-quest");
+    const created = createPrototypeReward(settled, { name: "看一部电影", coinCost: 1, isRepeatable: false });
+    const redeemed = redeemPrototypeReward(created, created.rewards[0].id);
+    const repeated = redeemPrototypeReward(redeemed, created.rewards[0].id);
+    const expensive = createPrototypeReward(redeemed, { name: "升级一次旅行体验", coinCost: 100, isRepeatable: true });
+    const insufficient = redeemPrototypeReward(expensive, expensive.rewards[0].id);
+
+    expect(redeemed.coinBalance).toBe(created.coinBalance - 1);
+    expect(redeemed.redemptions[0]).toMatchObject({ rewardName: "看一部电影", coinCost: 1 });
+    expect(repeated).toBe(redeemed);
+    expect(insufficient).toBe(expensive);
   });
 });
