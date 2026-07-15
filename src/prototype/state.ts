@@ -209,7 +209,10 @@ export function getPrototypeWeekKey(date = new Date()): string {
 
 export function getPrototypeWeeklyReviewSummary(state: PrototypeState, now = new Date()): PrototypeWeeklyReviewSummary {
   const weekKey = getPrototypeWeekKey(now);
-  const isCurrentWeek = (timestamp: string | undefined) => {\n    if (!timestamp) return false;\n    return getPrototypeWeekKey(new Date(timestamp)) === weekKey;\n  };
+  const isCurrentWeek = (timestamp: string | undefined) => {
+    if (!timestamp) return false;
+    return getPrototypeWeekKey(new Date(timestamp)) === weekKey;
+  };
   const transactions = state.transactions.filter((transaction) => isCurrentWeek(transaction.createdAt));
   return {
     weekKey,
