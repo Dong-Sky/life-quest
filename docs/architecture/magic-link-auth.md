@@ -1,32 +1,37 @@
-# 邮箱 Magic Link 设置
+# 用户名与密码登录设置
 
-## 功能
+## 体验
 
-Questline 使用 Supabase 的一次性邮箱登录链接。用户不需要密码；首次使用某邮箱时，Supabase 会创建账号，现有数据库触发器会创建对应的 `profile`。
+Questline 第一版登录只展示用户名和密码：
 
-## Supabase 设置
+- 用户首次输入用户名和密码，选择“创建账号”
+- 系统在 Supabase 创建真实的私密账户与 profile
+- 以后可在另一台设备用同一用户名和密码登录
+- 不发送登录邮件，也不要求邮件验证
+
+用户名在内部被转换成专用登录标识，普通用户不需要看到或填写邮箱。
+
+## Supabase 必做设置
 
 在 Supabase Dashboard：
 
-1. 打开 **Authentication → URL Configuration**。
-2. 把 **Site URL** 设置为 Questline 的生产 Vercel 网址，例如 `https://life-quest-xxx.vercel.app`。
-3. 在 **Redirect URLs** 添加：
-   ```text
-   https://life-quest-xxx.vercel.app/auth/callback
-   ```
+1. 打开 **Authentication → Sign In / Providers**。
+2. 进入 **Email**。
+3. 关闭 **Confirm email**。
 4. 保存。
 
-需要测试预览部署时，可额外添加该预览网址的 `/auth/callback` 地址。
+否则 Supabase 会要求用户通过邮箱完成确认，注册后无法直接建立会话。
 
 ## 验收
 
-1. 无痕窗口打开生产网址，应出现邮箱登录页。
-2. 输入一个可收邮件的邮箱，点击“发送登录邮件”。
-3. 邮箱中点击链接，应回到 Questline 的 `/auth/callback`，随后进入今日页面。
-4. 在 Supabase **Authentication → Users** 可见用户；**Table Editor → profiles** 可见该用户的 profile。
-5. 点击侧栏底部“退出登录”，应回到登录页。
-6. 用第二个邮箱重复测试，确认它是另一名用户。
+1. 用无痕窗口打开 Vercel 预览或生产网址。
+2. 点击“没有账号？创建一个”。
+3. 输入用户名、8 位以上密码和确认密码，点击“创建账号”。
+4. 应直接进入 Questline；在侧栏底部应显示当前用户名。
+5. 点击“退出登录”，应回到登录页。
+6. 在另一台设备或无痕窗口使用同一用户名与密码登录，应成功进入同一账号。
+7. 在 Supabase **Authentication → Users** 和 **Table Editor → profiles** 可看到该账户。
 
 ## 限制
 
-本轮只完成身份确认与会话。现有任务、主线与奖励仍存在浏览器本地；下一轮再把它们逐步切换到带 RLS 的云端表。
+本轮先解决跨设备身份识别。现有任务、主线、奖励仍保留在浏览器本地；下一轮再把它们切换到拥有 Row Level Security 的云端表，完成真正的数据同步。
