@@ -95,6 +95,7 @@ export interface PrototypeWeeklyPlanQuestDraft {
   importance: Importance;
   resistance: Resistance;
   mainlineId?: string;
+  projectId?: string;
 }
 
 export interface PrototypeQuest {
@@ -269,6 +270,7 @@ export function createPrototypeWeeklyPlan(state: PrototypeState, now: Date, draf
     id: crypto.randomUUID(),
     ...draft,
     mainlineId: draft.mainlineId || undefined,
+    projectId: draft.projectId || undefined,
     status: "open" as const,
   }));
   const plan: PrototypeWeeklyPlan = {
