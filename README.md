@@ -6,7 +6,7 @@
 
 ## 当前阶段
 
-Sprint 0：建立可运行的 Web 项目骨架与浅色工作台体验。
+已完成本地可体验原型；正在接入 Supabase，为多账号、私密云端数据和未来共同副本做准备。
 
 ## 产品与架构文档
 
@@ -14,6 +14,7 @@ Sprint 0：建立可运行的 Web 项目骨架与浅色工作台体验。
 - [MVP 范围](docs/product/mvp-scope.md)
 - [浅色工作台 UI 规范](docs/product/ui-direction.md)
 - [初始架构](docs/architecture/overview.md)
+- [Supabase 云端基础](docs/architecture/supabase-foundation.md)
 - [Sprint 0 任务](docs/tasks/sprint-0.md)
 
 ## 开发原则
