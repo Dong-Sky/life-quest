@@ -65,7 +65,7 @@ export default function FriendsPage() {
       setMessage(error.message);
       return;
     }
-    setMessage(data === "accepted" ? "已互相确认成为好友。" : data === "pending" ? "好友请求已发送，等待对方确认。" : "你们已经建立过好友关系。");
+    setMessage(data === "accepted" ? "已成为搭档。" : data === "pending" ? "已接受邀请，等待对方确认。" : "你们已经建立过伙伴关系。");
     await load();
   };
 
@@ -92,9 +92,9 @@ export default function FriendsPage() {
     {status === "error" ? <section className="mt-6 rounded-xl border border-red-200 bg-red-50 p-5"><p className="text-sm text-red-700">{message}</p></section> : null}
 
     {status === "ready" ? <div className="mt-6 space-y-6">
-      {incoming && incoming !== inviteCode ? <section className="rounded-xl border border-[var(--accent)] bg-[var(--accent-soft)] p-5"><p className="text-sm font-medium">你收到了一个好友邀请</p><p className="mt-2 text-sm leading-6 text-[var(--muted)]">确认后，对方才能邀请你进入共同副本。</p><button className="mt-4 rounded-lg bg-[var(--ink)] px-4 py-2 text-sm font-medium text-white" onClick={() => void sendRequest()} type="button">发送好友请求</button></section> : null}
+      {incoming && incoming !== inviteCode ? <section className="rounded-xl border border-[var(--accent)] bg-[var(--accent-soft)] p-5"><p className="text-sm font-medium">你收到了一个搭档邀请</p><p className="mt-2 text-sm leading-6 text-[var(--muted)]">接受后，对方会看到待确认提醒；双方确认后即可一起参与副本。</p><button className="mt-4 rounded-lg bg-[var(--ink)] px-4 py-2 text-sm font-medium text-white" onClick={() => void sendRequest()} type="button">接受邀请</button></section> : null}
 
-      {pendingReceived.length ? <section className="rounded-xl border border-amber-200 bg-amber-50 p-5"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">待确认的好友请求</p><p className="mt-1 text-sm text-[var(--muted)]">确认后即可一起参与共同副本。</p></div><span className="rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-900">{pendingReceived.length} 条待确认</span></div><div className="mt-4 space-y-3">{pendingReceived.map((friend) => <article className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-white/80 p-3" key={friend.friendship_id}><p className="font-medium">{friend.display_name}</p><button className="rounded-md bg-[var(--ink)] px-3 py-2 text-xs font-medium text-white" onClick={() => void accept(friend.friendship_id)} type="button">确认好友</button></article>)}</div></section> : null}
+      {pendingReceived.length ? <section className="rounded-xl border border-amber-200 bg-amber-50 p-5"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">待确认的搭档邀请</p><p className="mt-1 text-sm text-[var(--muted)]">对方已接受你的邀请，确认后即可一起参与副本。</p></div><span className="rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-900">{pendingReceived.length} 条待确认</span></div><div className="mt-4 space-y-3">{pendingReceived.map((friend) => <article className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-white/80 p-3" key={friend.friendship_id}><p className="font-medium">{friend.display_name}</p><button className="rounded-md bg-[var(--ink)] px-3 py-2 text-xs font-medium text-white" onClick={() => void accept(friend.friendship_id)} type="button">确认成为搭档</button></article>)}</div></section> : null}
 
       <section className="rounded-xl border border-[var(--line)] bg-white p-5"><p className="text-sm font-semibold">邀请一位搭档</p><p className="mt-1 text-sm leading-6 text-[var(--muted)]">复制链接发给对方即可。</p><div className="mt-4 flex flex-col gap-3 sm:flex-row"><input className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[#fafafa] px-3 py-2.5 text-xs text-[var(--muted)]" readOnly value={shareUrl} /><button className="shrink-0 rounded-lg bg-[var(--ink)] px-4 py-2 text-sm font-medium text-white" onClick={() => void copyInvite()} type="button">复制邀请链接</button></div></section>
 
