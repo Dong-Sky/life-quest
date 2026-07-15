@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getCycleKey } from "./recurrence";
-import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, createPrototypeWeeklyPlan, getPrototypeMilestoneProgress, getPrototypeWeeklyReviewSummary, redeemPrototypeReward, settlePrototypeQuest, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
+import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, createPrototypeWeeklyPlan, getPrototypeMilestoneProgress, getPrototypeWeeklyReviewSummary, redeemPrototypeReward, settlePrototypeQuest, togglePrototypeRewardWishlist, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
 
 function stateWithRecurringQuest(targetCount: number): PrototypeState {
   const cadence = targetCount === 1 ? "daily" : "weekly";
@@ -130,12 +130,14 @@ describe("reward store", () => {
     const redeemed = redeemPrototypeReward(created, created.rewards[0].id);
     const repeated = redeemPrototypeReward(redeemed, created.rewards[0].id);
     const expensive = createPrototypeReward(redeemed, { name: "升级一次旅行体验", coinCost: 100, isRepeatable: true });
-    const insufficient = redeemPrototypeReward(expensive, expensive.rewards[0].id);
+    const wishlisted = togglePrototypeRewardWishlist(expensive, expensive.rewards[0].id);
+    const insufficient = redeemPrototypeReward(wishlisted, wishlisted.rewards[0].id);
 
     expect(redeemed.coinBalance).toBe(created.coinBalance - 1);
     expect(redeemed.redemptions[0]).toMatchObject({ rewardName: "看一部电影", coinCost: 1 });
     expect(repeated).toBe(redeemed);
-    expect(insufficient).toBe(expensive);
+    expect(wishlisted.rewards[0]).toMatchObject({ isWishlisted: true });
+    expect(insufficient).toBe(wishlisted);
   });
 });
 
@@ -145,14 +147,21 @@ describe("weekly settlement", () => {
     const now = new Date("2026-07-15T09:00:00.000Z");
     const settled = settlePrototypeQuest(stateWithRecurringQuest(1), "recurring-quest");
     const summary = getPrototypeWeeklyReviewSummary(settled, now);
-    const planned = createPrototypeWeeklyPlan(settled, now, ["准备下周汇报", "", "安排三次训练"]);
-    const repeated = createPrototypeWeeklyPlan(planned, now, ["准备下周汇报", "安排三次训练"]);
+    const planned = createPrototypeWeeklyPlan(settled, now, [
+      { title: "准备下周汇报", questType: "focus", difficulty: "hard", importance: "goal", resistance: "procrastinated", mainlineId: "career" },
+      { title: "", questType: "standard", difficulty: "standard", importance: "helpful", resistance: "none" },
+      { title: "安排三次训练", questType: "standard", difficulty: "standard", importance: "helpful", resistance: "none", mainlineId: "health" },
+    ]);
+    const repeated = createPrototypeWeeklyPlan(planned, now, [
+      { title: "准备下周汇报", questType: "focus", difficulty: "hard", importance: "goal", resistance: "procrastinated" },
+    ]);
 
     expect(summary).toMatchObject({ completedQuests: 1, xpEarned: settled.totalXp, coinsEarned: settled.coinBalance });
     expect(planned.weeklyPlans).toHaveLength(1);
     expect(planned.weeklyPlans[0].questIds).toHaveLength(2);
     expect(planned.quests.slice(0, 2).map((quest) => quest.title)).toEqual(["准备下周汇报", "安排三次训练"]);
-    expect(planned.quests.slice(0, 2).every((quest) => quest.status === "open")).toBe(true);
+    expect(planned.quests[0]).toMatchObject({ status: "open", questType: "focus", difficulty: "hard", importance: "goal", resistance: "procrastinated", mainlineId: "career" });
+    expect(planned.quests[1]).toMatchObject({ status: "open", mainlineId: "health" });
     expect(repeated).toBe(planned);
   });
 });
