@@ -72,6 +72,13 @@ export interface PrototypeWeeklyReviewSummary {
   coinsEarned: number;
 }
 
+export interface PrototypeWeeklyPlan {
+  id: string;
+  sourceWeekKey: string;
+  questIds: string[];
+  createdAt: string;
+}
+
 export interface PrototypeQuest {
   id: string;
   title: string;
@@ -123,6 +130,7 @@ export interface PrototypeState {
   rewards: PrototypeReward[];
   redemptions: PrototypeRewardRedemption[];
   reviews: PrototypeWeeklyReview[];
+  weeklyPlans: PrototypeWeeklyPlan[];
   quests: PrototypeQuest[];
   totalXp: number;
   coinBalance: number;
@@ -139,6 +147,7 @@ export function initialPrototypeState(): PrototypeState {
     rewards: [],
     redemptions: [],
     reviews: [],
+    weeklyPlans: [],
     totalXp: 0,
     coinBalance: 0,
     transactions: [],
@@ -184,6 +193,7 @@ export function readPrototypeState(): PrototypeState {
       rewards: parsed.rewards ?? [],
       redemptions: parsed.redemptions ?? [],
       reviews: parsed.reviews ?? [],
+      weeklyPlans: parsed.weeklyPlans ?? [],
       quests: parsed.quests ?? initial.quests,
       transactions: parsed.transactions ?? [],
     };
@@ -220,6 +230,37 @@ export function getPrototypeWeeklyReviewSummary(state: PrototypeState, now = new
     openQuests: state.quests.filter((quest) => quest.status === "open").length,
     xpEarned: transactions.reduce((total, transaction) => total + transaction.xpDelta, 0),
     coinsEarned: transactions.reduce((total, transaction) => total + transaction.coinDelta, 0),
+  };
+}
+
+export function createPrototypeWeeklyPlan(state: PrototypeState, now: Date, titles: string[]): PrototypeState {
+  const sourceWeekKey = getPrototypeWeekKey(now);
+  if (state.weeklyPlans.some((plan) => plan.sourceWeekKey === sourceWeekKey)) return state;
+
+  const uniqueTitles = [...new Set(titles.map((title) => title.trim()).filter(Boolean))].slice(0, 3);
+  if (!uniqueTitles.length) return state;
+
+  const createdAt = now.toISOString();
+  const quests = uniqueTitles.map((title) => ({
+    id: crypto.randomUUID(),
+    title,
+    questType: "standard" as const,
+    difficulty: "standard" as const,
+    importance: "helpful" as const,
+    resistance: "none" as const,
+    status: "open" as const,
+  }));
+  const plan: PrototypeWeeklyPlan = {
+    id: crypto.randomUUID(),
+    sourceWeekKey,
+    questIds: quests.map((quest) => quest.id),
+    createdAt,
+  };
+
+  return {
+    ...state,
+    quests: [...quests, ...state.quests],
+    weeklyPlans: [plan, ...state.weeklyPlans],
   };
 }
 
