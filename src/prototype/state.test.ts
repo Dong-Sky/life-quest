@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getCycleKey } from "./recurrence";
-import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, getPrototypeMilestoneProgress, redeemPrototypeReward, settlePrototypeQuest, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
+import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, createPrototypeWeeklyPlan, getPrototypeMilestoneProgress, getPrototypeWeeklyReviewSummary, redeemPrototypeReward, settlePrototypeQuest, togglePrototypeRewardWishlist, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
 
 function stateWithRecurringQuest(targetCount: number): PrototypeState {
   const cadence = targetCount === 1 ? "daily" : "weekly";
@@ -10,6 +10,8 @@ function stateWithRecurringQuest(targetCount: number): PrototypeState {
     milestones: [],
     rewards: [],
     redemptions: [],
+    reviews: [],
+    weeklyPlans: [],
     totalXp: 0,
     coinBalance: 0,
     transactions: [],
@@ -128,11 +130,41 @@ describe("reward store", () => {
     const redeemed = redeemPrototypeReward(created, created.rewards[0].id);
     const repeated = redeemPrototypeReward(redeemed, created.rewards[0].id);
     const expensive = createPrototypeReward(redeemed, { name: "升级一次旅行体验", coinCost: 100, isRepeatable: true });
-    const insufficient = redeemPrototypeReward(expensive, expensive.rewards[0].id);
+    const wishlisted = togglePrototypeRewardWishlist(expensive, expensive.rewards[0].id);
+    const insufficient = redeemPrototypeReward(wishlisted, wishlisted.rewards[0].id);
 
     expect(redeemed.coinBalance).toBe(created.coinBalance - 1);
     expect(redeemed.redemptions[0]).toMatchObject({ rewardName: "看一部电影", coinCost: 1 });
     expect(repeated).toBe(redeemed);
-    expect(insufficient).toBe(expensive);
+    expect(wishlisted.rewards[0]).toMatchObject({ isWishlisted: true });
+    expect(insufficient).toBe(wishlisted);
+  });
+});
+
+
+describe("weekly settlement", () => {
+  it("rolls to the current week while keeping a prior week's real settlement available", () => {
+    const lastWeek = new Date("2026-07-08T09:00:00.000Z");
+    const thisWeek = new Date("2026-07-15T09:00:00.000Z");
+    const settled = settlePrototypeQuest(stateWithRecurringQuest(1), "recurring-quest", lastWeek);
+    const priorSummary = getPrototypeWeeklyReviewSummary(settled, lastWeek);
+    const currentSummary = getPrototypeWeeklyReviewSummary(settled, thisWeek);
+    const planned = createPrototypeWeeklyPlan(settled, thisWeek, [
+      { title: "准备下周汇报", questType: "focus", difficulty: "hard", importance: "goal", resistance: "procrastinated", mainlineId: "career", projectId: "report-project" },
+      { title: "", questType: "standard", difficulty: "standard", importance: "helpful", resistance: "none" },
+      { title: "安排三次训练", questType: "standard", difficulty: "standard", importance: "helpful", resistance: "none", mainlineId: "health", projectId: "fitness-project" },
+    ]);
+    const repeated = createPrototypeWeeklyPlan(planned, thisWeek, [
+      { title: "准备下周汇报", questType: "focus", difficulty: "hard", importance: "goal", resistance: "procrastinated" },
+    ]);
+
+    expect(priorSummary).toMatchObject({ completedQuests: 1, xpEarned: settled.totalXp, coinsEarned: settled.coinBalance });
+    expect(currentSummary).toMatchObject({ completedQuests: 0, xpEarned: 0, coinsEarned: 0 });
+    expect(planned.weeklyPlans).toHaveLength(1);
+    expect(planned.weeklyPlans[0].questIds).toHaveLength(2);
+    expect(planned.quests.slice(0, 2).map((quest) => quest.title)).toEqual(["准备下周汇报", "安排三次训练"]);
+    expect(planned.quests[0]).toMatchObject({ status: "open", questType: "focus", difficulty: "hard", importance: "goal", resistance: "procrastinated", mainlineId: "career", projectId: "report-project" });
+    expect(planned.quests[1]).toMatchObject({ status: "open", mainlineId: "health", projectId: "fitness-project" });
+    expect(repeated).toBe(planned);
   });
 });

@@ -43,7 +43,16 @@ export interface PrototypeReward {
   name: string;
   coinCost: number;
   isRepeatable: boolean;
+  isWishlisted: boolean;
+  wishlistedAt?: string;
   createdAt: string;
+}
+
+export interface PrototypeRewardDraft {
+  name: string;
+  coinCost: number;
+  isRepeatable: boolean;
+  isWishlisted?: boolean;
 }
 
 export interface PrototypeRewardRedemption {
@@ -52,6 +61,41 @@ export interface PrototypeRewardRedemption {
   rewardName: string;
   coinCost: number;
   redeemedAt: string;
+}
+
+export interface PrototypeWeeklyReview {
+  id: string;
+  weekKey: string;
+  wins: string;
+  blockers: string;
+  nextPriorities: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PrototypeWeeklyReviewSummary {
+  weekKey: string;
+  completedQuests: number;
+  openQuests: number;
+  xpEarned: number;
+  coinsEarned: number;
+}
+
+export interface PrototypeWeeklyPlan {
+  id: string;
+  sourceWeekKey: string;
+  questIds: string[];
+  createdAt: string;
+}
+
+export interface PrototypeWeeklyPlanQuestDraft {
+  title: string;
+  questType: QuestType;
+  difficulty: Difficulty;
+  importance: Importance;
+  resistance: Resistance;
+  mainlineId?: string;
+  projectId?: string;
 }
 
 export interface PrototypeQuest {
@@ -104,6 +148,8 @@ export interface PrototypeState {
   milestones: PrototypeMilestone[];
   rewards: PrototypeReward[];
   redemptions: PrototypeRewardRedemption[];
+  reviews: PrototypeWeeklyReview[];
+  weeklyPlans: PrototypeWeeklyPlan[];
   quests: PrototypeQuest[];
   totalXp: number;
   coinBalance: number;
@@ -119,6 +165,8 @@ export function initialPrototypeState(): PrototypeState {
     milestones: [],
     rewards: [],
     redemptions: [],
+    reviews: [],
+    weeklyPlans: [],
     totalXp: 0,
     coinBalance: 0,
     transactions: [],
@@ -161,8 +209,13 @@ export function readPrototypeState(): PrototypeState {
       mainlines: parsed.mainlines ?? [],
       projects: parsed.projects ?? [],
       milestones: (parsed.milestones ?? []).map((milestone) => ({ ...milestone, questIds: milestone.questIds ?? [] })),
-      rewards: parsed.rewards ?? [],
+      rewards: (parsed.rewards ?? []).map((reward) => ({
+        ...reward,
+        isWishlisted: reward.isWishlisted ?? false,
+      })),
       redemptions: parsed.redemptions ?? [],
+      reviews: parsed.reviews ?? [],
+      weeklyPlans: parsed.weeklyPlans ?? [],
       quests: parsed.quests ?? initial.quests,
       transactions: parsed.transactions ?? [],
     };
@@ -176,6 +229,79 @@ export function readPrototypeState(): PrototypeState {
 
 export function writePrototypeState(state: PrototypeState) {
   window.localStorage.setItem(PROTOTYPE_KEY, JSON.stringify(state));
+}
+
+export function getPrototypeWeekKey(date = new Date()): string {
+  const local = new Date(date);
+  const mondayOffset = (local.getDay() + 6) % 7;
+  local.setDate(local.getDate() - mondayOffset);
+  local.setHours(0, 0, 0, 0);
+  return [local.getFullYear(), String(local.getMonth() + 1).padStart(2, "0"), String(local.getDate()).padStart(2, "0")].join("-");
+}
+
+export function getPrototypeWeeklyReviewSummary(state: PrototypeState, now = new Date()): PrototypeWeeklyReviewSummary {
+  const weekKey = getPrototypeWeekKey(now);
+  const isCurrentWeek = (timestamp: string | undefined) => {
+    if (!timestamp) return false;
+    return getPrototypeWeekKey(new Date(timestamp)) === weekKey;
+  };
+  const transactions = state.transactions.filter((transaction) => isCurrentWeek(transaction.createdAt));
+  return {
+    weekKey,
+    completedQuests: state.quests.filter((quest) => isCurrentWeek(quest.completedAt)).length,
+    openQuests: state.quests.filter((quest) => quest.status === "open").length,
+    xpEarned: transactions.reduce((total, transaction) => total + transaction.xpDelta, 0),
+    coinsEarned: transactions.reduce((total, transaction) => total + transaction.coinDelta, 0),
+  };
+}
+
+export function createPrototypeWeeklyPlan(state: PrototypeState, now: Date, drafts: PrototypeWeeklyPlanQuestDraft[]): PrototypeState {
+  const sourceWeekKey = getPrototypeWeekKey(now);
+  if (state.weeklyPlans.some((plan) => plan.sourceWeekKey === sourceWeekKey)) return state;
+
+  const uniqueDrafts = drafts
+    .map((draft) => ({ ...draft, title: draft.title.trim() }))
+    .filter((draft, index, items) => Boolean(draft.title) && items.findIndex((item) => item.title === draft.title) === index)
+    .slice(0, 3);
+  if (!uniqueDrafts.length) return state;
+
+  const createdAt = now.toISOString();
+  const quests = uniqueDrafts.map((draft) => ({
+    id: crypto.randomUUID(),
+    ...draft,
+    mainlineId: draft.mainlineId || undefined,
+    projectId: draft.projectId || undefined,
+    status: "open" as const,
+  }));
+  const plan: PrototypeWeeklyPlan = {
+    id: crypto.randomUUID(),
+    sourceWeekKey,
+    questIds: quests.map((quest) => quest.id),
+    createdAt,
+  };
+
+  return {
+    ...state,
+    quests: [...quests, ...state.quests],
+    weeklyPlans: [plan, ...state.weeklyPlans],
+  };
+}
+
+export function upsertPrototypeWeeklyReview(state: PrototypeState, now: Date, draft: Pick<PrototypeWeeklyReview, "wins" | "blockers" | "nextPriorities">): PrototypeState {
+  const weekKey = getPrototypeWeekKey(now);
+  const timestamp = now.toISOString();
+  const review = {
+    weekKey,
+    wins: draft.wins.trim(),
+    blockers: draft.blockers.trim(),
+    nextPriorities: draft.nextPriorities.map((item) => item.trim()).filter(Boolean).slice(0, 3),
+    updatedAt: timestamp,
+  };
+  const existing = state.reviews.find((item) => item.weekKey === weekKey);
+  if (existing) {
+    return { ...state, reviews: state.reviews.map((item) => item.id === existing.id ? { ...item, ...review } : item) };
+  }
+  return { ...state, reviews: [{ id: crypto.randomUUID(), ...review, createdAt: timestamp }, ...state.reviews] };
 }
 
 export function createPrototypeMainline(state: PrototypeState, draft: Pick<PrototypeMainline, "name" | "vision">): PrototypeState {
@@ -284,7 +410,7 @@ export function getPrototypeMilestoneProgress(state: PrototypeState, milestone: 
   return { total, completed, isCompleted: total > 0 && completed === total };
 }
 
-export function createPrototypeReward(state: PrototypeState, draft: Pick<PrototypeReward, "name" | "coinCost" | "isRepeatable">): PrototypeState {
+export function createPrototypeReward(state: PrototypeState, draft: PrototypeRewardDraft): PrototypeState {
   const name = draft.name.trim();
   const coinCost = Math.floor(draft.coinCost);
   if (!name || !Number.isFinite(coinCost) || coinCost < 1) return state;
@@ -296,8 +422,25 @@ export function createPrototypeReward(state: PrototypeState, draft: Pick<Prototy
       name,
       coinCost,
       isRepeatable: draft.isRepeatable,
+      isWishlisted: draft.isWishlisted ?? false,
+      wishlistedAt: draft.isWishlisted ? new Date().toISOString() : undefined,
       createdAt: new Date().toISOString(),
     }, ...state.rewards],
+  };
+}
+
+export function togglePrototypeRewardWishlist(state: PrototypeState, rewardId: string): PrototypeState {
+  const reward = state.rewards.find((item) => item.id === rewardId);
+  if (!reward) return state;
+
+  const isWishlisted = !reward.isWishlisted;
+  return {
+    ...state,
+    rewards: state.rewards.map((item) => item.id === rewardId ? {
+      ...item,
+      isWishlisted,
+      wishlistedAt: isWishlisted ? new Date().toISOString() : undefined,
+    } : item),
   };
 }
 
@@ -356,13 +499,13 @@ export function updatePrototypeQuest(state: PrototypeState, id: string, draft: P
   };
 }
 
-export function settlePrototypeQuest(state: PrototypeState, id: string): PrototypeState {
-  const refreshed = refreshPrototypeStateForCurrentCycle(state);
+export function settlePrototypeQuest(state: PrototypeState, id: string, now = new Date()): PrototypeState {
+  const refreshed = refreshPrototypeStateForCurrentCycle(state, now);
   const quest = refreshed.quests.find((item) => item.id === id);
   if (!quest || quest.status === "completed") return refreshed;
 
   const reward = calculateQuestReward(quest);
-  const createdAt = new Date().toISOString();
+  const createdAt = now.toISOString();
   const transaction: PrototypeTransaction = {
     id: crypto.randomUUID(),
     questId: quest.id,
