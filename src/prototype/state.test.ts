@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { getCycleKey } from "./recurrence";
-import { createPrototypeProject, settlePrototypeQuest, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
+import { createPrototypeMilestone, createPrototypeProject, getPrototypeMilestoneProgress, settlePrototypeQuest, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
 
 function stateWithRecurringQuest(targetCount: number): PrototypeState {
   const cadence = targetCount === 1 ? "daily" : "weekly";
   return {
     mainlines: [],
     projects: [],
+    milestones: [],
     totalXp: 0,
     coinBalance: 0,
     transactions: [],
@@ -73,22 +74,9 @@ describe("project creation and editing", () => {
   });
 
   it("can attach or clear a mainline after a project was created", () => {
-    const created = createPrototypeProject(stateWithRecurringQuest(1), {
-      name: "旅行计划",
-      victoryCondition: "",
-    });
-    const attached = updatePrototypeProject(created, created.projects[0].id, {
-      name: "旅行计划",
-      victoryCondition: "完成行程和复盘",
-      mainlineId: "relationship",
-      dueDate: "2026-12-01",
-    });
-    const cleared = updatePrototypeProject(attached, attached.projects[0].id, {
-      name: "旅行计划",
-      victoryCondition: "完成行程和复盘",
-      mainlineId: undefined,
-      dueDate: undefined,
-    });
+    const created = createPrototypeProject(stateWithRecurringQuest(1), { name: "旅行计划", victoryCondition: "" });
+    const attached = updatePrototypeProject(created, created.projects[0].id, { name: "旅行计划", victoryCondition: "完成行程和复盘", mainlineId: "relationship", dueDate: "2026-12-01" });
+    const cleared = updatePrototypeProject(attached, attached.projects[0].id, { name: "旅行计划", victoryCondition: "完成行程和复盘", mainlineId: undefined, dueDate: undefined });
 
     expect(attached.projects[0].mainlineId).toBe("relationship");
     expect(cleared.projects[0]).toMatchObject({ mainlineId: undefined, dueDate: undefined });
@@ -100,20 +88,32 @@ describe("quest editing", () => {
     const initial = stateWithRecurringQuest(1);
     initial.quests[0] = { ...initial.quests[0], recurrence: undefined };
     const settled = settlePrototypeQuest(initial, "recurring-quest");
-    const updated = updatePrototypeQuest(settled, "recurring-quest", {
-      title: "完成锻炼记录",
-      mainlineId: "health",
-      projectId: "fitness-project",
-    });
+    const updated = updatePrototypeQuest(settled, "recurring-quest", { title: "完成锻炼记录", mainlineId: "health", projectId: "fitness-project" });
 
-    expect(updated.quests[0]).toMatchObject({
-      title: "完成锻炼记录",
-      mainlineId: "health",
-      projectId: "fitness-project",
-      reward: settled.quests[0].reward,
-    });
+    expect(updated.quests[0]).toMatchObject({ title: "完成锻炼记录", mainlineId: "health", projectId: "fitness-project", reward: settled.quests[0].reward });
     expect(updated.totalXp).toBe(settled.totalXp);
     expect(updated.coinBalance).toBe(settled.coinBalance);
     expect(updated.transactions).toEqual(settled.transactions);
+  });
+});
+
+describe("automatic project milestones", () => {
+  it("completes only after every linked project quest is settled, without extra rewards", () => {
+    const projectState = createPrototypeProject(stateWithRecurringQuest(1), { name: "12 周减脂计划", victoryCondition: "" });
+    const projectId = projectState.projects[0].id;
+    const linkedQuestState: PrototypeState = {
+      ...projectState,
+      quests: [{ ...projectState.quests[0], recurrence: undefined, projectId }],
+    };
+    const created = createPrototypeMilestone(linkedQuestState, projectId, "完成第一周训练安排", ["recurring-quest"]);
+    const beforeSettlement = getPrototypeMilestoneProgress(created, created.milestones[0]);
+    const settled = settlePrototypeQuest(created, "recurring-quest");
+    const afterSettlement = getPrototypeMilestoneProgress(settled, settled.milestones[0]);
+    const edited = updatePrototypeMilestone(settled, settled.milestones[0].id, "完成第一周训练与复盘", ["recurring-quest"]);
+
+    expect(beforeSettlement).toMatchObject({ total: 1, completed: 0, isCompleted: false });
+    expect(afterSettlement).toMatchObject({ total: 1, completed: 1, isCompleted: true });
+    expect(edited.milestones[0]).toMatchObject({ title: "完成第一周训练与复盘", questIds: ["recurring-quest"] });
+    expect(settled.transactions).toHaveLength(1);
   });
 });
