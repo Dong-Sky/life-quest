@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
-import { AppShell } from "@/components/app-shell";
+import { AuthGate } from "@/components/auth-gate";
 
 export const metadata: Metadata = {
-  title: "Life Quest",
+  title: "Questline",
   description: "A calm, gamified personal operating system.",
 };
 
@@ -12,7 +12,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="zh-CN">
       <body>
-        <AppShell>{children}</AppShell>
+        <AuthGate>{children}</AuthGate>
       </body>
     </html>
   );
