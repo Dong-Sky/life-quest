@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "re
 import { AppShell } from "@/components/app-shell";
 import { CloudStateBridge } from "@/components/cloud-state-bridge";
 import { isValidUsername, normalizeUsername, usernameToAuthEmail } from "@/src/lib/auth/username";
+import { initialPrototypeState, writePrototypeState } from "@/src/prototype/state";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/src/lib/supabase/client";
 
 type AuthGateProps = {
@@ -65,7 +66,24 @@ export function AuthGate({ children }: AuthGateProps) {
     ? user.user_metadata.display_name
     : "已登录用户";
 
-  return <CloudStateBridge key={user.id} supabase={supabase} user={user}><AppShell accountName={displayName} onSignOut={() => void supabase.auth.signOut()}>{children}</AppShell></CloudStateBridge>;
+  async function resetWorkspace() {
+    if (!window.confirm("这会永久清空当前账号的任务、奖励、结算和计划，且不会影响其他账号。确定要重新开始吗？")) return;
+
+    const initialState = initialPrototypeState();
+    const { error } = await supabase
+      .from("workspace_states")
+      .upsert({ user_id: user.id, state: initialState }, { onConflict: "user_id" });
+
+    if (error) {
+      window.alert(`无法清空当前工作台：${error.message}`);
+      return;
+    }
+
+    writePrototypeState(initialState);
+    window.location.reload();
+  }
+
+  return <CloudStateBridge key={user.id} supabase={supabase} user={user}><AppShell accountName={displayName} onResetWorkspace={() => void resetWorkspace()} onSignOut={() => void supabase.auth.signOut()}>{children}</AppShell></CloudStateBridge>;
 }
 
 function LoadingScreen() {
