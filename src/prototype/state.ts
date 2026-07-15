@@ -54,6 +54,24 @@ export interface PrototypeRewardRedemption {
   redeemedAt: string;
 }
 
+export interface PrototypeWeeklyReview {
+  id: string;
+  weekKey: string;
+  wins: string;
+  blockers: string;
+  nextPriorities: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PrototypeWeeklyReviewSummary {
+  weekKey: string;
+  completedQuests: number;
+  openQuests: number;
+  xpEarned: number;
+  coinsEarned: number;
+}
+
 export interface PrototypeQuest {
   id: string;
   title: string;
@@ -104,6 +122,7 @@ export interface PrototypeState {
   milestones: PrototypeMilestone[];
   rewards: PrototypeReward[];
   redemptions: PrototypeRewardRedemption[];
+  reviews: PrototypeWeeklyReview[];
   quests: PrototypeQuest[];
   totalXp: number;
   coinBalance: number;
@@ -119,6 +138,7 @@ export function initialPrototypeState(): PrototypeState {
     milestones: [],
     rewards: [],
     redemptions: [],
+    reviews: [],
     totalXp: 0,
     coinBalance: 0,
     transactions: [],
@@ -163,6 +183,7 @@ export function readPrototypeState(): PrototypeState {
       milestones: (parsed.milestones ?? []).map((milestone) => ({ ...milestone, questIds: milestone.questIds ?? [] })),
       rewards: parsed.rewards ?? [],
       redemptions: parsed.redemptions ?? [],
+      reviews: parsed.reviews ?? [],
       quests: parsed.quests ?? initial.quests,
       transactions: parsed.transactions ?? [],
     };
@@ -176,6 +197,44 @@ export function readPrototypeState(): PrototypeState {
 
 export function writePrototypeState(state: PrototypeState) {
   window.localStorage.setItem(PROTOTYPE_KEY, JSON.stringify(state));
+}
+
+export function getPrototypeWeekKey(date = new Date()): string {
+  const local = new Date(date);
+  const mondayOffset = (local.getDay() + 6) % 7;
+  local.setDate(local.getDate() - mondayOffset);
+  local.setHours(0, 0, 0, 0);
+  return [local.getFullYear(), String(local.getMonth() + 1).padStart(2, "0"), String(local.getDate()).padStart(2, "0")].join("-");
+}
+
+export function getPrototypeWeeklyReviewSummary(state: PrototypeState, now = new Date()): PrototypeWeeklyReviewSummary {
+  const weekKey = getPrototypeWeekKey(now);
+  const isCurrentWeek = (timestamp: string | undefined) => Boolean(timestamp) && getPrototypeWeekKey(new Date(timestamp)) === weekKey;
+  const transactions = state.transactions.filter((transaction) => isCurrentWeek(transaction.createdAt));
+  return {
+    weekKey,
+    completedQuests: state.quests.filter((quest) => isCurrentWeek(quest.completedAt)).length,
+    openQuests: state.quests.filter((quest) => quest.status === "open").length,
+    xpEarned: transactions.reduce((total, transaction) => total + transaction.xpDelta, 0),
+    coinsEarned: transactions.reduce((total, transaction) => total + transaction.coinDelta, 0),
+  };
+}
+
+export function upsertPrototypeWeeklyReview(state: PrototypeState, now: Date, draft: Pick<PrototypeWeeklyReview, "wins" | "blockers" | "nextPriorities">): PrototypeState {
+  const weekKey = getPrototypeWeekKey(now);
+  const timestamp = now.toISOString();
+  const review = {
+    weekKey,
+    wins: draft.wins.trim(),
+    blockers: draft.blockers.trim(),
+    nextPriorities: draft.nextPriorities.map((item) => item.trim()).filter(Boolean).slice(0, 3),
+    updatedAt: timestamp,
+  };
+  const existing = state.reviews.find((item) => item.weekKey === weekKey);
+  if (existing) {
+    return { ...state, reviews: state.reviews.map((item) => item.id === existing.id ? { ...item, ...review } : item) };
+  }
+  return { ...state, reviews: [{ id: crypto.randomUUID(), ...review, createdAt: timestamp }, ...state.reviews] };
 }
 
 export function createPrototypeMainline(state: PrototypeState, draft: Pick<PrototypeMainline, "name" | "vision">): PrototypeState {
