@@ -174,6 +174,19 @@ alter table public.milestone_quests enable row level security;
 alter table public.weekly_plans enable row level security;
 alter table public.weekly_plan_quests enable row level security;
 
+-- Keep this initialization script safe to run again after an interrupted setup.
+drop policy if exists "profiles are private" on public.profiles;
+drop policy if exists "mainlines are private" on public.mainlines;
+drop policy if exists "projects are private" on public.projects;
+drop policy if exists "quests are private" on public.quests;
+drop policy if exists "transactions are private" on public.reward_transactions;
+drop policy if exists "rewards are private" on public.rewards;
+drop policy if exists "redemptions are private" on public.reward_redemptions;
+drop policy if exists "milestones are private" on public.milestones;
+drop policy if exists "milestone links are private" on public.milestone_quests;
+drop policy if exists "weekly plans are private" on public.weekly_plans;
+drop policy if exists "weekly plan links are private" on public.weekly_plan_quests;
+
 create policy "profiles are private" on public.profiles for all using (id = auth.uid()) with check (id = auth.uid());
 create policy "mainlines are private" on public.mainlines for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "projects are private" on public.projects for all using (user_id = auth.uid()) with check (user_id = auth.uid());
