@@ -65,7 +65,7 @@ export function AuthGate({ children }: AuthGateProps) {
     ? user.user_metadata.display_name
     : "已登录用户";
 
-  return <CloudStateBridge supabase={supabase} user={user}><AppShell accountName={displayName} onSignOut={() => void supabase.auth.signOut()}>{children}</AppShell></CloudStateBridge>;
+  return <CloudStateBridge key={user.id} supabase={supabase} user={user}><AppShell accountName={displayName} onSignOut={() => void supabase.auth.signOut()}>{children}</AppShell></CloudStateBridge>;
 }
 
 function LoadingScreen() {
