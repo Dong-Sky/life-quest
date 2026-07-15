@@ -3,6 +3,7 @@
 import type { User } from "@supabase/supabase-js";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
+import { usePathname } from "next/navigation";
 import { buildMagicLinkRedirectUrl } from "@/src/lib/auth/redirect-url";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/src/lib/supabase/client";
 
@@ -11,6 +12,7 @@ type AuthGateProps = {
 };
 
 export function AuthGate({ children }: AuthGateProps) {
+  const pathname = usePathname();
   const configured = isSupabaseConfigured();
   const supabase = useMemo(() => (configured ? createSupabaseBrowserClient() : null), [configured]);
   const [user, setUser] = useState<User | null>(null);
@@ -47,6 +49,10 @@ export function AuthGate({ children }: AuthGateProps) {
       listener.subscription.unsubscribe();
     };
   }, [supabase]);
+
+  if (pathname === "/auth/callback") {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return <LoadingScreen />;
