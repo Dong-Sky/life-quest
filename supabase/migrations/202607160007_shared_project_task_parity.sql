@@ -184,7 +184,9 @@ begin
 end;
 $$;
 
-create or replace function public.complete_shared_project_task(target_task_id uuid)
+drop function if exists public.complete_shared_project_task(uuid);
+
+create function public.complete_shared_project_task(target_task_id uuid)
 returns jsonb
 language plpgsql
 security definer
