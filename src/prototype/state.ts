@@ -108,6 +108,7 @@ export interface PrototypeQuest {
   mainlineId?: string;
   projectId?: string;
   recurrence?: RecurrenceSettings;
+  dueDate?: string;
   status: QuestStatus;
   reward?: QuestReward;
   completedAt?: string;
@@ -125,12 +126,43 @@ export interface PrototypeQuestDraft {
     cadence: RecurrenceCadence;
     targetCount?: number;
   };
+  dueDate?: string;
 }
 
 export interface PrototypeQuestEdit {
   title: string;
   mainlineId?: string;
   projectId?: string;
+  dueDate?: string;
+}
+
+export type PrototypeQuestDeadlineStatus = "overdue" | "today" | "upcoming";
+
+export interface PrototypeQuestDeadline {
+  quest: PrototypeQuest;
+  status: PrototypeQuestDeadlineStatus;
+  daysUntil: number;
+}
+
+function startOfLocalDay(value: Date): Date {
+  const day = new Date(value);
+  day.setHours(0, 0, 0, 0);
+  return day;
+}
+
+export function getPrototypeQuestDeadlines(state: PrototypeState, now = new Date(), withinDays = 3): PrototypeQuestDeadline[] {
+  const today = startOfLocalDay(now);
+
+  return state.quests
+    .filter((quest) => quest.status === "open" && !quest.recurrence && Boolean(quest.dueDate))
+    .map((quest) => {
+      const due = startOfLocalDay(new Date(quest.dueDate + "T00:00:00"));
+      const daysUntil = Math.round((due.getTime() - today.getTime()) / 86_400_000);
+      const status: PrototypeQuestDeadlineStatus = daysUntil < 0 ? "overdue" : daysUntil === 0 ? "today" : "upcoming";
+      return { quest, status, daysUntil };
+    })
+    .filter((item) => item.daysUntil <= withinDays)
+    .sort((left, right) => left.daysUntil - right.daysUntil || left.quest.title.localeCompare(right.quest.title));
 }
 
 export interface PrototypeTransaction {
@@ -536,6 +568,7 @@ export function createPrototypeQuest(state: PrototypeState, draft: PrototypeQues
   const recurrence = draft.recurrence
     ? createRecurrenceSettings(draft.recurrence.cadence, draft.recurrence.targetCount, now)
     : undefined;
+  const dueDate = recurrence ? undefined : draft.dueDate || undefined;
 
   return {
     ...state,
@@ -543,6 +576,7 @@ export function createPrototypeQuest(state: PrototypeState, draft: PrototypeQues
       ...draft,
       title,
       recurrence,
+      dueDate,
       id: crypto.randomUUID(),
       status: "open",
     }, ...state.quests],
@@ -561,6 +595,7 @@ export function updatePrototypeQuest(state: PrototypeState, id: string, draft: P
       title,
       mainlineId: draft.mainlineId || undefined,
       projectId: item.recurrence ? undefined : draft.projectId || undefined,
+      dueDate: item.recurrence ? undefined : draft.dueDate || undefined,
     } : item),
   };
 }
