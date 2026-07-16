@@ -7,7 +7,7 @@ import { WeeklyRhythmCard } from "@/components/weekly-rhythm-card";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/src/lib/supabase/client";
 import { FRIENDSHIP_STATE_EVENT } from "@/src/lib/friends/events";
 
-type NavigationIconName = "today" | "quests" | "mainlines" | "rewards" | "projects" | "sharedProjects" | "reviews" | "friends";
+type NavigationIconName = "today" | "quests" | "mainlines" | "rewards" | "projects" | "reviews" | "friends";
 
 const navigation: Array<{ href: string; label: string; icon: NavigationIconName }> = [
   { href: "/dashboard", label: "今日", icon: "today" },
@@ -15,7 +15,6 @@ const navigation: Array<{ href: string; label: string; icon: NavigationIconName 
   { href: "/mainlines", label: "主线", icon: "mainlines" },
   { href: "/rewards", label: "奖励", icon: "rewards" },
   { href: "/projects", label: "副本", icon: "projects" },
-  { href: "/shared-projects", label: "共同副本", icon: "sharedProjects" },
   { href: "/reviews", label: "结算", icon: "reviews" },
   { href: "/friends", label: "伙伴", icon: "friends" },
 ];
@@ -74,7 +73,7 @@ export function AppShell({ children, accountName, onSignOut, onResetWorkspace }:
     </aside>
     <main className="min-w-0 pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</main>
     <nav aria-label="手机主导航" className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--line)] bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-8px_24px_rgba(31,35,40,0.05)] backdrop-blur lg:hidden">
-      <div className="grid grid-cols-8">{navigation.map((item) => {
+      <div className="grid grid-cols-7">{navigation.map((item) => {
         const active = pathname === item.href;
         const pendingCount = item.icon === "friends" ? pendingFriendCount : 0;
         return <Link aria-current={active ? "page" : undefined} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-medium transition ${active ? "text-[var(--accent)]" : "text-[var(--muted)]"}`} href={item.href} key={item.href}>
@@ -109,7 +108,6 @@ function NavigationIcon({ name }: { name: NavigationIconName }) {
     mainlines: <><path d="M5 18 18 5" {...common} /><path d="M9 5h9v9" {...common} /><circle cx="6" cy="17" r="1.5" {...common} /></>,
     rewards: <><path d="m12 4 1.9 4.1L18 10l-4.1 1.9L12 16l-1.9-4.1L6 10l4.1-.9L12 4Z" {...common} /><path d="m18 15 .9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9L18 15Z" {...common} /></>,
     projects: <><path d="m12 4 6.5 3.8v8.4L12 20 5.5 16.2V7.8L12 4Z" {...common} /><path d="m5.8 7.9 6.2 3.6 6.2-3.6M12 11.5V20" {...common} /></>,
-    sharedProjects: <><path d="m12 4 6.5 3.8v8.4L12 20 5.5 16.2V7.8L12 4Z" {...common} /><path d="m5.8 7.9 6.2 3.6 6.2-3.6M12 11.5V20" {...common} /><path d="m8.5 7.5 3.5 2 3.5-2" {...common} /></>,
     reviews: <><path d="M7 4.5h10v15H7z" {...common} /><path d="M10 8h4M10 12h4M10 16h2" {...common} /><path d="m5 8-1.5 1.5L5 11" {...common} /></>,
     friends: <><circle cx="9" cy="9" r="3" {...common} /><circle cx="17" cy="10" r="2.3" {...common} /><path d="M3.8 20c.7-3.3 3-5 5.2-5s4.5 1.7 5.2 5" {...common} /><path d="M14.5 15.7c2.7.2 4.7 1.6 5.2 4.3" {...common} /></>,
   };
