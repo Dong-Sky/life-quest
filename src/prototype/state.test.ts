@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getCycleKey } from "./recurrence";
-import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, createPrototypeWeeklyPlan, getPrototypeMilestoneProgress, getPrototypeWeeklyReviewSummary, getPrototypeWeeklyRhythm, hydratePrototypeState, redeemPrototypeReward, settlePrototypeQuest, togglePrototypeRewardWishlist, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
+import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, createPrototypeWeeklyPlan, getPrototypeMilestoneProgress, getPrototypeQuestDeadlines, getPrototypeWeeklyReviewSummary, getPrototypeWeeklyRhythm, hydratePrototypeState, redeemPrototypeReward, settlePrototypeQuest, togglePrototypeRewardWishlist, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
 
 function stateWithRecurringQuest(targetCount: number): PrototypeState {
   const cadence = targetCount === 1 ? "daily" : "weekly";
@@ -219,5 +219,38 @@ describe("cloud workspace hydration", () => {
     });
 
     expect(state.rewards[0].isWishlisted).toBe(true);
+  });
+});
+
+
+describe("task deadline reminders", () => {
+  it("orders overdue, today, and upcoming tasks while excluding irrelevant tasks", () => {
+    const base = stateWithRecurringQuest(1);
+    const state: PrototypeState = {
+      ...base,
+      quests: [
+        { ...base.quests[0], id: "in-three-days", title: "三天后", recurrence: undefined, dueDate: "2026-07-19" },
+        { ...base.quests[0], id: "overdue", title: "已逾期", recurrence: undefined, dueDate: "2026-07-15" },
+        { ...base.quests[0], id: "today", title: "今天", recurrence: undefined, dueDate: "2026-07-16" },
+        { ...base.quests[0], id: "completed", title: "已结算", recurrence: undefined, dueDate: "2026-07-16", status: "completed" },
+        { ...base.quests[0], id: "recurring", title: "周期任务", dueDate: "2026-07-16" },
+        { ...base.quests[0], id: "later", title: "四天后", recurrence: undefined, dueDate: "2026-07-20" },
+      ],
+    };
+
+    const deadlines = getPrototypeQuestDeadlines(state, new Date("2026-07-16T10:00:00"));
+
+    expect(deadlines.map((item) => item.quest.id)).toEqual(["overdue", "today", "in-three-days"]);
+    expect(deadlines.map((item) => item.status)).toEqual(["overdue", "today", "upcoming"]);
+  });
+
+  it("keeps deadlines off recurring tasks when editing a quest", () => {
+    const base = stateWithRecurringQuest(1);
+    const updated = updatePrototypeQuest(base, "recurring-quest", {
+      title: "锻炼 30 分钟",
+      dueDate: "2026-07-16",
+    });
+
+    expect(updated.quests[0].dueDate).toBeUndefined();
   });
 });

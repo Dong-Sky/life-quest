@@ -19,7 +19,7 @@ type TaskAttributes = {
   resistance: "none" | "reluctant" | "procrastinated" | "avoided";
 };
 
-type TaskDraft = TaskAttributes & { title: string };
+type TaskDraft = TaskAttributes & { title: string; dueDate: string };
 
 type SharedMember = {
   user_id: string;
@@ -38,6 +38,7 @@ type SharedTask = {
   completed_by: string | null;
   xp_awarded: number | null;
   coins_awarded: number | null;
+  due_date: string | null;
 };
 
 type SharedMilestone = {
@@ -95,7 +96,7 @@ const resistanceLabels: Record<TaskAttributes["resistance"], string> = {
 };
 
 function createTaskDraft(): TaskDraft {
-  return { title: "", ...defaultTaskAttributes };
+  return { title: "", dueDate: "", ...defaultTaskAttributes };
 }
 
 export default function SharedProjectsPage() {
@@ -137,6 +138,7 @@ export default function SharedProjectsPage() {
         ...task,
         xp_awarded: task.xp_awarded ?? null,
         coins_awarded: task.coins_awarded ?? null,
+        due_date: task.due_date ?? null,
       })),
       milestones: project.milestones ?? [],
     })) as SharedProject[];
@@ -232,6 +234,7 @@ export default function SharedProjectsPage() {
       task_difficulty: draft.difficulty,
       task_importance: draft.importance,
       task_resistance: draft.resistance,
+      task_due_date: draft.dueDate || null,
     });
 
     if (taskError) {
@@ -341,6 +344,7 @@ export default function SharedProjectsPage() {
       new_task_difficulty: milestoneNewTask.difficulty,
       new_task_importance: milestoneNewTask.importance,
       new_task_resistance: milestoneNewTask.resistance,
+      new_task_due_date: milestoneNewTask.dueDate || null,
     });
 
     if (milestoneError) {
@@ -405,7 +409,7 @@ export default function SharedProjectsPage() {
           <section className="mt-5">
             <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-medium">直接拆解任务</p><p className="mt-1 text-xs text-[var(--muted)]">先把要做的事逐条写下；需要时再展开设置任务属性。</p></div></div>
             <div className="mt-3 divide-y divide-[var(--line)] rounded-lg border border-[var(--line)]">
-              {project.tasks.length ? project.tasks.map((task) => <div className="flex items-center justify-between gap-3 px-3 py-3" key={task.id}><div><p className={task.status === "completed" ? "text-sm text-[var(--muted)] line-through" : "text-sm"}>{task.title}</p><p className="mt-1 text-xs text-[var(--muted)]">{taskTypeLabels[task.quest_type]} · {difficultyLabels[task.difficulty]} · {importanceLabels[task.importance]} · {resistanceLabels[task.resistance]}</p></div>{task.status === "completed" ? <span className="text-right text-xs text-[var(--success)]">已完成<br />+{task.xp_awarded ?? 0} XP · +{task.coins_awarded ?? 0} 金币</span> : <button className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs hover:bg-gray-50" onClick={() => void completeTask(task.id)} type="button">完成任务</button>}</div>) : <p className="px-3 py-4 text-sm text-[var(--muted)]">还没有共同任务。先添加一个下一步行动。</p>}
+              {project.tasks.length ? project.tasks.map((task) => <div className="flex items-center justify-between gap-3 px-3 py-3" key={task.id}><div><p className={task.status === "completed" ? "text-sm text-[var(--muted)] line-through" : "text-sm"}>{task.title}</p><p className="mt-1 text-xs text-[var(--muted)]">{taskTypeLabels[task.quest_type]} · {difficultyLabels[task.difficulty]} · {importanceLabels[task.importance]} · {resistanceLabels[task.resistance]}{task.due_date ? ` · DDL：${task.due_date}` : ""}</p></div>{task.status === "completed" ? <span className="text-right text-xs text-[var(--success)]">已完成<br />+{task.xp_awarded ?? 0} XP · +{task.coins_awarded ?? 0} 金币</span> : <button className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs hover:bg-gray-50" onClick={() => void completeTask(task.id)} type="button">完成任务</button>}</div>) : <p className="px-3 py-4 text-sm text-[var(--muted)]">还没有共同任务。先添加一个下一步行动。</p>}
             </div>
 
             {!isCompleted ? <form className="mt-3 rounded-lg border border-[var(--line)] bg-[#fafafa] p-3" onSubmit={(event) => { event.preventDefault(); void addTask(project.id); }}><div className="flex gap-2"><input className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" onChange={(event) => updateTaskDraft(project.id, { title: event.target.value })} placeholder="例如：预订酒店" value={(taskDrafts[project.id] ?? createTaskDraft()).title} /><button className="shrink-0 rounded-lg bg-[var(--ink)] px-3 py-2 text-sm font-medium text-white" type="submit">添加任务</button></div><button className="mt-2 text-xs text-[var(--muted)] hover:text-[var(--accent)]" onClick={() => setExpandedTaskForms((current) => ({ ...current, [project.id]: !current[project.id] }))} type="button">{expandedTaskForms[project.id] ? "⌄ 收起任务属性" : "› 设置任务属性（可选）"}</button>{expandedTaskForms[project.id] ? <TaskAttributeFields draft={taskDrafts[project.id] ?? createTaskDraft()} onChange={(patch) => updateTaskDraft(project.id, patch)} /> : null}</form> : null}
@@ -433,6 +437,7 @@ function TaskAttributeFields({ draft, onChange }: { draft: TaskDraft; onChange: 
     <SelectField label="难度" onChange={(value) => onChange({ difficulty: value as TaskAttributes["difficulty"] })} value={draft.difficulty}>{Object.entries(difficultyLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectField>
     <SelectField label="重要度" onChange={(value) => onChange({ importance: value as TaskAttributes["importance"] })} value={draft.importance}>{Object.entries(importanceLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectField>
     <SelectField label="心理阻力" onChange={(value) => onChange({ resistance: value as TaskAttributes["resistance"] })} value={draft.resistance}>{Object.entries(resistanceLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectField>
+    <label className="grid gap-1 text-xs text-[var(--muted)]"><span>DDL（可选）</span><input className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm text-[var(--ink)]" onChange={(event) => onChange({ dueDate: event.target.value })} type="date" value={draft.dueDate} /></label>
   </div>;
 }
 
