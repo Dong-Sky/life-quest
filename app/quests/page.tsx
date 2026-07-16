@@ -24,10 +24,12 @@ export default function QuestsPage() {
   const [isRecurring, setIsRecurring] = useState(false);
   const [cadence, setCadence] = useState<RecurrenceCadence>("daily");
   const [weeklyTarget, setWeeklyTarget] = useState(3);
+  const [dueDate, setDueDate] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editMainlineId, setEditMainlineId] = useState("");
   const [editProjectId, setEditProjectId] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
 
   const save = (next: PrototypeState) => { writePrototypeState(next); setState(next); };
   const create = () => {
@@ -40,12 +42,14 @@ export default function QuestsPage() {
       mainlineId: mainlineId || undefined,
       projectId: isRecurring ? undefined : projectId || undefined,
       recurrence: isRecurring ? { cadence, targetCount: cadence === "weekly" ? weeklyTarget : undefined } : undefined,
+      dueDate: isRecurring ? undefined : dueDate || undefined,
     });
     if (next !== state) {
       save(next);
       setTitle("");
       setMainlineId("");
       setProjectId("");
+      setDueDate("");
     }
   };
   const reset = () => save(initialPrototypeState());
@@ -54,12 +58,14 @@ export default function QuestsPage() {
     setEditTitle(quest.title);
     setEditMainlineId(quest.mainlineId ?? "");
     setEditProjectId(quest.projectId ?? "");
+    setEditDueDate(quest.dueDate ?? "");
   };
   const saveEdit = (quest: PrototypeQuest) => {
     const next = updatePrototypeQuest(state, quest.id, {
       title: editTitle,
       mainlineId: editMainlineId || undefined,
       projectId: quest.recurrence ? undefined : editProjectId || undefined,
+      dueDate: quest.recurrence ? undefined : editDueDate || undefined,
     });
     if (next !== state) {
       save(next);
@@ -76,7 +82,7 @@ export default function QuestsPage() {
         <AssociationSelect label="所属主线（可选）" items={state.mainlines} emptyLabel="暂不关联主线" onChange={setMainlineId} value={mainlineId} />
         <div className="rounded-lg border border-[var(--line)] bg-white px-3 py-2.5"><label className="flex cursor-pointer items-center gap-2 text-sm font-medium"><input checked={isRecurring} className="h-4 w-4 accent-[var(--accent)]" onChange={(event) => setIsRecurring(event.target.checked)} type="checkbox" />设为周期任务</label><p className="mt-1 text-xs text-[var(--muted)]">例如每天锻炼，或每周完成 3 次运动。</p></div>
       </div>
-      {!isRecurring ? <div className="mt-3 max-w-sm"><AssociationSelect label="所属副本（可选）" items={state.projects} emptyLabel="暂不关联副本" onChange={setProjectId} value={projectId} /></div> : null}
+      {!isRecurring ? <div className="mt-3 grid max-w-xl gap-3 sm:grid-cols-2"><AssociationSelect label="所属副本（可选）" items={state.projects} emptyLabel="暂不关联副本" onChange={setProjectId} value={projectId} /><DeadlineInput onChange={setDueDate} value={dueDate} /></div> : null}
       {isRecurring ? <div className="mt-3 grid max-w-xl gap-3 sm:grid-cols-2"><Select label="重复频率" options={[["daily", "每天"], ["weekly", "每周"]]} value={cadence} onChange={(value) => setCadence(value as RecurrenceCadence)} />{cadence === "weekly" ? <label className="grid gap-1.5 text-xs text-[var(--muted)]"><span>本周目标次数</span><input className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm text-[var(--ink)]" max="7" min="1" onChange={(event) => setWeeklyTarget(Number(event.target.value))} type="number" value={weeklyTarget} /></label> : <p className="self-end pb-2 text-sm text-[var(--muted)]">每天完成 1 次后，明天会自动重新出现。</p>}</div> : null}
       <div className="mt-4 flex justify-end"><button className="rounded-lg bg-[var(--ink)] px-4 py-2 text-sm font-medium text-white" type="submit">创建任务</button></div>
     </form>
@@ -88,8 +94,8 @@ export default function QuestsPage() {
         const action = quest.recurrence ? "记录一次并结算" : "完成并结算";
         const isEditing = editingId === quest.id;
         return <div className="border-b border-[var(--line)] last:border-b-0" key={quest.id}>
-          <article className="flex items-center justify-between gap-4 px-4 py-4"><div><p className={quest.status === "completed" ? "font-medium text-[var(--muted)] line-through" : "font-medium"}>{quest.title}</p><p className="mt-1 text-xs text-[var(--muted)]">{project?.name ?? mainline?.name ?? "未关联主线"} · {recurring ?? `${quest.questType} · ${quest.difficulty}`}</p></div><div className="flex shrink-0 items-center gap-2">{quest.status === "completed" ? <span className="text-right text-xs text-[var(--success)]">{quest.recurrence ? "本周期已完成" : `+${quest.reward?.xp} XP · +${quest.reward?.coins} coins`}</span> : <button className="rounded-md bg-[var(--accent-soft)] px-2.5 py-1.5 text-xs font-medium text-[var(--accent)]" onClick={() => save(settlePrototypeQuest(state, quest.id))}>{action}</button>}<button className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs hover:bg-gray-50" onClick={() => startEdit(quest)} type="button">编辑</button></div></article>
-          {isEditing ? <div className="grid gap-3 bg-[#fafafa] px-4 pb-4 pt-1 sm:grid-cols-2"><label className="grid gap-1.5 text-xs text-[var(--muted)] sm:col-span-2"><span>下一步行动</span><input className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm text-[var(--ink)]" onChange={(event) => setEditTitle(event.target.value)} value={editTitle} /></label><AssociationSelect label="所属主线（可选）" items={state.mainlines} emptyLabel="暂不关联主线" onChange={setEditMainlineId} value={editMainlineId} />{quest.recurrence ? <p className="self-end pb-2 text-xs text-[var(--muted)]">周期任务保留独立节奏，暂不关联副本。</p> : <AssociationSelect label="所属副本（可选）" items={state.projects} emptyLabel="暂不关联副本" onChange={setEditProjectId} value={editProjectId} />}<div className="flex gap-2 sm:col-span-2"><button className="rounded-md bg-[var(--ink)] px-3 py-2 text-xs font-medium text-white" onClick={() => saveEdit(quest)} type="button">保存修改</button><button className="rounded-md border border-[var(--line)] px-3 py-2 text-xs" onClick={() => setEditingId(null)} type="button">取消</button></div></div> : null}
+          <article className="flex items-center justify-between gap-4 px-4 py-4"><div><p className={quest.status === "completed" ? "font-medium text-[var(--muted)] line-through" : "font-medium"}>{quest.title}</p><p className="mt-1 text-xs text-[var(--muted)]">{project?.name ?? mainline?.name ?? "未关联主线"} · {recurring ?? `${quest.questType} · ${quest.difficulty}`}{quest.dueDate ? ` · DDL：${quest.dueDate}` : ""}</p></div><div className="flex shrink-0 items-center gap-2">{quest.status === "completed" ? <span className="text-right text-xs text-[var(--success)]">{quest.recurrence ? "本周期已完成" : `+${quest.reward?.xp} XP · +${quest.reward?.coins} coins`}</span> : <button className="rounded-md bg-[var(--accent-soft)] px-2.5 py-1.5 text-xs font-medium text-[var(--accent)]" onClick={() => save(settlePrototypeQuest(state, quest.id))}>{action}</button>}<button className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs hover:bg-gray-50" onClick={() => startEdit(quest)} type="button">编辑</button></div></article>
+          {isEditing ? <div className="grid gap-3 bg-[#fafafa] px-4 pb-4 pt-1 sm:grid-cols-2"><label className="grid gap-1.5 text-xs text-[var(--muted)] sm:col-span-2"><span>下一步行动</span><input className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm text-[var(--ink)]" onChange={(event) => setEditTitle(event.target.value)} value={editTitle} /></label><AssociationSelect label="所属主线（可选）" items={state.mainlines} emptyLabel="暂不关联主线" onChange={setEditMainlineId} value={editMainlineId} />{quest.recurrence ? <p className="self-end pb-2 text-xs text-[var(--muted)]">周期任务保留独立节奏，暂不关联副本或 DDL。</p> : <><AssociationSelect label="所属副本（可选）" items={state.projects} emptyLabel="暂不关联副本" onChange={setEditProjectId} value={editProjectId} /><DeadlineInput onChange={setEditDueDate} value={editDueDate} /></>}<div className="flex gap-2 sm:col-span-2"><button className="rounded-md bg-[var(--ink)] px-3 py-2 text-xs font-medium text-white" onClick={() => saveEdit(quest)} type="button">保存修改</button><button className="rounded-md border border-[var(--line)] px-3 py-2 text-xs" onClick={() => setEditingId(null)} type="button">取消</button></div></div> : null}
         </div>;
       })}
     </section>
@@ -104,6 +110,10 @@ function recurrenceDescription(quest: PrototypeQuest): string | undefined {
 
 function AssociationSelect({ label, items, emptyLabel, value, onChange }: { label: string; items: Array<{ id: string; name: string }>; emptyLabel: string; value: string; onChange: (value: string) => void }) {
   return <label className="grid gap-1.5 text-xs text-[var(--muted)]"><span>{label}</span><select className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm text-[var(--ink)]" value={value} onChange={(event) => onChange(event.target.value)}><option value="">{emptyLabel}</option>{items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>;
+}
+
+function DeadlineInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return <label className="grid gap-1.5 text-xs text-[var(--muted)]"><span>DDL（可选）</span><input className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm text-[var(--ink)]" onChange={(event) => onChange(event.target.value)} type="date" value={value} /></label>;
 }
 
 function Select({ label, options, value, onChange }: { label: string; options: readonly (readonly [string, string])[]; value: string; onChange: (value: string) => void }) {
