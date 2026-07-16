@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { WeeklyRhythmCard } from "@/components/weekly-rhythm-card";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/src/lib/supabase/client";
 import { FRIENDSHIP_STATE_EVENT } from "@/src/lib/friends/events";
+import { QuestlineMark } from "@/components/questline-brand";
 
 type NavigationIconName = "today" | "quests" | "mainlines" | "rewards" | "projects" | "reviews" | "friends";
 
@@ -19,9 +20,13 @@ const navigation: Array<{ href: string; label: string; icon: NavigationIconName 
   { href: "/friends", label: "伙伴", icon: "friends" },
 ];
 
+const mobilePrimaryNavigation = navigation.filter((item) => ["/dashboard", "/quests", "/mainlines", "/projects"].includes(item.href));
+const mobileMoreNavigation = navigation.filter((item) => !mobilePrimaryNavigation.includes(item));
+
 export function AppShell({ children, accountName, onSignOut, onResetWorkspace }: { children: ReactNode; accountName?: string; onSignOut?: () => void; onResetWorkspace?: () => void }) {
   const pathname = usePathname();
   const [pendingFriendCount, setPendingFriendCount] = useState(0);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
@@ -57,7 +62,7 @@ export function AppShell({ children, accountName, onSignOut, onResetWorkspace }:
   return <div className="min-h-screen bg-[var(--canvas)] lg:grid lg:grid-cols-[232px_minmax(0,1fr)]">
     <aside className="border-b border-[var(--line)] bg-white/90 px-4 py-3 backdrop-blur lg:min-h-screen lg:border-b-0 lg:border-r lg:px-4 lg:py-5">
       <div className="flex items-center gap-3 px-1 lg:px-2 lg:pb-8 lg:pt-1">
-        <BrandMark />
+        <QuestlineMark className="h-10 w-10" />
         <div><p className="text-[15px] font-semibold tracking-tight">Questline</p><p className="mt-0.5 text-xs text-[var(--muted)]">人生工作台</p></div>
         {accountName ? <p className="ml-auto max-w-[9rem] truncate text-xs text-[var(--muted)] lg:hidden" title={accountName}>{accountName}</p> : null}
         {onSignOut ? <button className="shrink-0 text-xs font-medium text-[var(--muted)] transition hover:text-[var(--ink)] lg:hidden" onClick={onSignOut} type="button">退出</button> : null}
@@ -72,15 +77,17 @@ export function AppShell({ children, accountName, onSignOut, onResetWorkspace }:
       {accountName ? <div className="mt-5 hidden rounded-2xl border border-[var(--line)] bg-[#f8fbff] p-3.5 lg:block"><p className="truncate text-xs text-[var(--muted)]" title={accountName}>当前用户：{accountName}</p><div className="mt-2 flex items-center gap-3">{onSignOut ? <button className="text-xs font-medium text-[var(--muted)] transition hover:text-[var(--ink)]" onClick={onSignOut} type="button">退出登录</button> : null}{onResetWorkspace ? <button className="text-xs font-medium text-[var(--muted)] underline-offset-2 transition hover:text-red-600 hover:underline" onClick={onResetWorkspace} type="button">重新开始工作台</button> : null}</div></div> : null}
     </aside>
     <main className="min-w-0 pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</main>
-    <nav aria-label="手机主导航" className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--line)] bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden">
-      <div className="grid grid-cols-7">{navigation.map((item) => {
+    {mobileMoreOpen ? <div className="fixed inset-x-0 bottom-[calc(4.55rem+env(safe-area-inset-bottom))] z-30 px-3 lg:hidden"><div className="mx-auto grid max-w-md grid-cols-3 gap-2 rounded-2xl border border-[var(--line)] bg-white p-2.5 shadow-[0_14px_36px_rgba(15,23,42,0.16)]">{mobileMoreNavigation.map((item) => { const active = pathname === item.href; const pendingCount = item.icon === "friends" ? pendingFriendCount : 0; return <Link aria-current={active ? "page" : undefined} className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl text-xs font-medium transition ${active ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--muted)] hover:bg-slate-50"}`} href={item.href} key={item.href} onClick={() => setMobileMoreOpen(false)}><span className="relative"><NavigationIcon name={item.icon} />{pendingCount ? <PendingBadge count={pendingCount} /> : null}</span><span>{item.label}</span></Link>; })}</div></div> : null}
+    <nav aria-label="手机主导航" className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--line)] bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden">
+      <div className="grid grid-cols-5 gap-1">{mobilePrimaryNavigation.map((item) => {
         const active = pathname === item.href;
-        const pendingCount = item.icon === "friends" ? pendingFriendCount : 0;
-        return <Link aria-current={active ? "page" : undefined} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-medium transition ${active ? "text-[var(--accent)]" : "text-[var(--muted)]"}`} href={item.href} key={item.href}>
-          <span className="relative"><NavigationIcon name={item.icon} />{pendingCount ? <PendingBadge count={pendingCount} /> : null}</span>
+        return <Link aria-current={active ? "page" : undefined} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-medium transition ${active ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--muted)]"}`} href={item.href} key={item.href}>
+          <NavigationIcon name={item.icon} />
           <span>{item.label}</span>
         </Link>;
-      })}</div>
+      })}
+      <button aria-expanded={mobileMoreOpen} aria-label="打开更多导航" className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-medium transition ${mobileMoreNavigation.some((item) => item.href === pathname) || mobileMoreOpen ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--muted)]"}`} onClick={() => setMobileMoreOpen((open) => !open)} type="button"><span aria-hidden="true" className="text-base leading-none">•••</span><span>更多</span></button>
+      </div>
     </nav>
   </div>;
 }
@@ -94,10 +101,6 @@ function NavigationLink({ item, active, pendingCount }: { item: (typeof navigati
 
 function PendingBadge({ count }: { count: number }) {
   return <span aria-label={`${count} 个待确认好友请求`} className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full border-2 border-white bg-rose-500 px-0.5 text-[9px] font-semibold leading-none text-white">{count > 9 ? "9+" : count}</span>;
-}
-
-function BrandMark() {
-  return <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--ink)] shadow-[0_8px_20px_rgba(15,23,42,0.14)]"><svg aria-hidden="true" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><path d="M6 5.5h5.5a3 3 0 0 1 3 3V18H9a3 3 0 0 0-3 3V5.5Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /><path d="M14.5 18H18V9a3 3 0 0 0-3-3h-.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /><path d="m10 11 1.3 1.3L14 9.6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /></svg></div>;
 }
 
 function NavigationIcon({ name }: { name: NavigationIconName }) {
