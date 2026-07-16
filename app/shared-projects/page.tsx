@@ -129,7 +129,17 @@ export default function SharedProjectsPage() {
     }
 
     setPartners(((friendships ?? []) as Partner[]).filter((partner) => partner.status === "accepted"));
-    setProjects((sharedProjects ?? []) as SharedProject[]);
+    setProjects(((sharedProjects ?? []) as Partial<SharedProject>[]).map((project) => ({
+      ...project,
+      members: project.members ?? [],
+      tasks: (project.tasks ?? []).map((task) => ({
+        ...defaultTaskAttributes,
+        ...task,
+        xp_awarded: task.xp_awarded ?? null,
+        coins_awarded: task.coins_awarded ?? null,
+      })),
+      milestones: project.milestones ?? [],
+    })) as SharedProject[]);
     setIsLoading(false);
   }, []);
 
