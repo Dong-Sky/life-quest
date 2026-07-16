@@ -129,8 +129,7 @@ export default function SharedProjectsPage() {
       return;
     }
 
-    setPartners(((friendships ?? []) as Partner[]).filter((partner) => partner.status === "accepted"));
-    setProjects(((sharedProjects ?? []) as Partial<SharedProject>[]).map((project) => ({
+    const normalizedProjects = ((sharedProjects ?? []) as Partial<SharedProject>[]).map((project) => ({
       ...project,
       members: project.members ?? [],
       tasks: (project.tasks ?? []).map((task) => ({
@@ -140,7 +139,34 @@ export default function SharedProjectsPage() {
         coins_awarded: task.coins_awarded ?? null,
       })),
       milestones: project.milestones ?? [],
-    })) as SharedProject[]);
+    })) as SharedProject[];
+
+    setPartners(((friendships ?? []) as Partner[]).filter((partner) => partner.status === "accepted"));
+    setProjects(normalizedProjects);
+
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData.user) {
+      const currentWorkspaceState = readPrototypeState();
+      let nextWorkspaceState = currentWorkspaceState;
+
+      for (const task of normalizedProjects.flatMap((project) => project.tasks)) {
+        if (task.status !== "completed" || task.completed_by !== userData.user.id || task.xp_awarded === null || task.coins_awarded === null) continue;
+        nextWorkspaceState = recordPrototypeSharedQuestSettlement(nextWorkspaceState, {
+          sharedTaskId: task.id,
+          title: task.title,
+          questType: task.quest_type,
+          difficulty: task.difficulty,
+          importance: task.importance,
+          resistance: task.resistance,
+          xp: task.xp_awarded,
+          coins: task.coins_awarded,
+          completedAt: task.completed_at ?? undefined,
+        });
+      }
+
+      if (nextWorkspaceState !== currentWorkspaceState) writePrototypeState(nextWorkspaceState);
+    }
+
     setIsLoading(false);
   }, []);
 
