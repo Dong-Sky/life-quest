@@ -338,10 +338,10 @@ export default function SharedProjectsPage() {
 
 function TaskAttributeFields({ draft, onChange }: { draft: TaskDraft; onChange: (patch: Partial<TaskDraft>) => void }) {
   return <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-    <SelectField label="任务类型" onChange={(value) => onChange({ questType: value as TaskAttributes["questType"])} value={draft.questType}>{Object.entries(taskTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectField>
-    <SelectField label="难度" onChange={(value) => onChange({ difficulty: value as TaskAttributes["difficulty"])} value={draft.difficulty}>{Object.entries(difficultyLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectField>
-    <SelectField label="重要度" onChange={(value) => onChange({ importance: value as TaskAttributes["importance"])} value={draft.importance}>{Object.entries(importanceLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectField>
-    <SelectField label="心理阻力" onChange={(value) => onChange({ resistance: value as TaskAttributes["resistance"])} value={draft.resistance}>{Object.entries(resistanceLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectField>
+    <SelectField label="任务类型" onChange={(value) => onChange({ questType: value as TaskAttributes["questType"] })} value={draft.questType}>{Object.entries(taskTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectField>
+    <SelectField label="难度" onChange={(value) => onChange({ difficulty: value as TaskAttributes["difficulty"] })} value={draft.difficulty}>{Object.entries(difficultyLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectField>
+    <SelectField label="重要度" onChange={(value) => onChange({ importance: value as TaskAttributes["importance"] })} value={draft.importance}>{Object.entries(importanceLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectField>
+    <SelectField label="心理阻力" onChange={(value) => onChange({ resistance: value as TaskAttributes["resistance"] })} value={draft.resistance}>{Object.entries(resistanceLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectField>
   </div>;
 }
 
