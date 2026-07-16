@@ -12,11 +12,12 @@ const options = {
   resistance: [["none", "无明显阻力"], ["reluctant", "有些不想做"], ["procrastinated", "明显拖延"], ["avoided", "长期回避"]],
 } as const;
 
-export function LinkedQuestPanel({ state, onStateChange, mainlineId, projectId }: {
+export function LinkedQuestPanel({ state, onStateChange, mainlineId, projectId, embedded = false }: {
   state: PrototypeState;
   onStateChange: (next: PrototypeState) => void;
   mainlineId?: string;
   projectId?: string;
+  embedded?: boolean;
 }) {
   const [title, setTitle] = useState("");
   const [questType, setQuestType] = useState<QuestType>("standard");
@@ -24,7 +25,8 @@ export function LinkedQuestPanel({ state, onStateChange, mainlineId, projectId }
   const [importance, setImportance] = useState<Importance>("helpful");
   const [resistance, setResistance] = useState<Resistance>("none");
   const [dueDate, setDueDate] = useState("");
-  const quests = state.quests.filter((quest) => projectId ? quest.projectId === projectId : quest.mainlineId === mainlineId && !quest.projectId);
+  const milestoneQuestIds = new Set(projectId ? state.milestones.filter((milestone) => milestone.projectId === projectId).flatMap((milestone) => milestone.questIds) : []);
+  const quests = state.quests.filter((quest) => projectId ? quest.projectId === projectId && !milestoneQuestIds.has(quest.id) : quest.mainlineId === mainlineId && !quest.projectId);
   const openCount = quests.filter((quest) => quest.status === "open").length;
 
   const create = () => {
@@ -37,7 +39,7 @@ export function LinkedQuestPanel({ state, onStateChange, mainlineId, projectId }
     }
   };
 
-  return <section className="mt-5 border-t border-[var(--line)] pt-4">
+  return <section className={embedded ? "pt-4" : "mt-5 border-t border-[var(--line)] pt-4"}>
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div><p className="text-sm font-medium">任务 · 未编入阶段的直接行动</p><p className="mt-1 text-xs text-[var(--muted)]">{projectId ? "这些行动属于当前副本，但暂未归入一个阶段里程碑。" : "这些行动连接到当前主线，但还没有归入某个副本。"} 需要时再展开设置任务属性。</p></div>
       <Link className="shrink-0 text-xs font-medium text-[var(--accent)] hover:underline" href="/quests">管理全部任务 →</Link>
