@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { calculateQuestReward } from "@/src/domain/rewards/calculate-quest-reward";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/client";
 import { recordPrototypeSharedQuestSettlement, readPrototypeState, writePrototypeState } from "@/src/prototype/state";
 
@@ -97,6 +98,30 @@ const resistanceLabels: Record<TaskAttributes["resistance"], string> = {
 
 function createTaskDraft(): TaskDraft {
   return { title: "", dueDate: "", ...defaultTaskAttributes };
+}
+
+function getSharedTaskProgress(tasks: SharedTask[]) {
+  const plannedXp = tasks.reduce((total, task) => total + calculateQuestReward({
+    questType: task.quest_type,
+    difficulty: task.difficulty,
+    importance: task.importance,
+    resistance: task.resistance,
+  }).xp, 0);
+  const completedTasks = tasks.filter((task) => task.status === "completed");
+  const completedXp = completedTasks.reduce((total, task) => total + calculateQuestReward({
+    questType: task.quest_type,
+    difficulty: task.difficulty,
+    importance: task.importance,
+    resistance: task.resistance,
+  }).xp, 0);
+
+  return {
+    total: tasks.length,
+    completed: completedTasks.length,
+    plannedXp,
+    completedXp,
+    percent: plannedXp ? Math.round((completedXp / plannedXp) * 100) : 0,
+  };
 }
 
 export default function SharedProjectsPage() {
@@ -390,16 +415,17 @@ export default function SharedProjectsPage() {
       {isLoading ? <div className="rounded-xl border border-[var(--line)] bg-white p-8 text-center text-sm text-[var(--muted)]">正在加载共同副本…</div> : null}
       {!isLoading && !projects.length ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-8 text-center"><p className="font-medium">还没有共同副本。</p><p className="mt-2 text-sm text-[var(--muted)]">从一次旅行、家庭计划或共同挑战开始即可。</p></div> : null}
       {projects.map((project) => {
-        const completed = project.tasks.filter((task) => task.status === "completed").length;
-        const total = project.tasks.length;
-        const percent = total ? Math.round((completed / total) * 100) : 0;
+        const progress = getSharedTaskProgress(project.tasks);
+        const completed = progress.completed;
+        const total = progress.total;
+        const percent = progress.percent;
         const isCompleted = project.status === "completed";
         const isCreatingMilestone = milestoneProjectId === project.id;
 
         return <article className="rounded-xl border border-[var(--line)] bg-white p-5" key={project.id}>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div><div className="flex items-center gap-2"><p className="font-semibold">{project.name}</p><span className={isCompleted ? "rounded-full bg-green-50 px-2 py-0.5 text-xs text-[var(--success)]" : "rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs text-[var(--accent)]"}>{isCompleted ? "已完成" : "推进中"}</span></div><p className="mt-2 text-sm text-[var(--muted)]">{project.victory_condition || "尚未写下胜利条件。"}</p><p className="mt-3 text-xs text-[var(--muted)]">参与者：{project.members.map((member) => member.display_name).join("、")}{project.due_date ? ` · 目标日期：${project.due_date}` : ""}</p></div>
-            <div className="min-w-36 rounded-lg bg-[var(--accent-soft)] px-3 py-2 text-right text-xs text-[var(--accent)]"><strong>{completed} / {total}</strong> 个任务<br /><span>{percent}% 推进</span></div>
+            <div className="min-w-40 rounded-lg bg-[var(--accent-soft)] px-3 py-2 text-right text-xs text-[var(--accent)]"><strong>{progress.completedXp} / {progress.plannedXp}</strong> XP 权重<br /><span>{completed}/{total} 个行动 · {percent}%</span></div>
           </div>
 
           <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-gray-100"><div className="h-full rounded-full bg-[var(--success)]" style={{ width: `${percent}%` }} /></div>
@@ -420,9 +446,10 @@ export default function SharedProjectsPage() {
             {isCreatingMilestone ? <MilestoneEditor project={project} newTask={milestoneNewTask} onCancel={() => setMilestoneProjectId(null)} onNewTaskChange={(patch) => setMilestoneNewTask((current) => ({ ...current, ...patch }))} onSave={() => void createMilestone()} onTaskIdsChange={setMilestoneTaskIds} onTitleChange={setMilestoneTitle} optionsOpen={milestoneOptionsOpen} selectedTaskIds={milestoneTaskIds} setOptionsOpen={setMilestoneOptionsOpen} title={milestoneTitle} /> : null}
             {project.milestones.length ? <div className="mt-3 divide-y divide-[var(--line)] rounded-lg border border-[var(--line)]">{project.milestones.map((milestone) => {
               const milestoneTasks = project.tasks.filter((task) => milestone.task_ids.includes(task.id));
-              const milestoneCompleted = milestoneTasks.filter((task) => task.status === "completed").length;
+              const milestoneProgress = getSharedTaskProgress(milestoneTasks);
+              const milestoneCompleted = milestoneProgress.completed;
               const autoCompleted = milestoneTasks.length > 0 && milestoneCompleted === milestoneTasks.length;
-              return <div className="flex items-center justify-between gap-3 px-3 py-3" key={milestone.id}><div><p className={autoCompleted ? "text-sm text-[var(--muted)] line-through" : "text-sm"}>{milestone.title}</p><p className="mt-1 text-xs text-[var(--muted)]">{milestoneTasks.length ? `已完成 ${milestoneCompleted} / ${milestoneTasks.length} 项关联任务` : "尚未关联任务"}</p></div><span className={autoCompleted ? "text-xs text-[var(--success)]" : "text-xs text-[var(--muted)]"}>{autoCompleted ? "自动完成" : "推进中"}</span></div>;
+              return <div className="flex items-center justify-between gap-3 px-3 py-3" key={milestone.id}><div><p className={autoCompleted ? "text-sm text-[var(--muted)] line-through" : "text-sm"}>{milestone.title}</p><p className="mt-1 text-xs text-[var(--muted)]">{milestoneTasks.length ? `已完成 ${milestoneCompleted} / ${milestoneTasks.length} 项关联任务 · ${milestoneProgress.completedXp}/${milestoneProgress.plannedXp} XP` : "尚未关联任务"}</p></div><span className={autoCompleted ? "text-xs text-[var(--success)]" : "text-xs text-[var(--muted)]"}>{autoCompleted ? "自动完成" : "推进中"}</span></div>;
             })}</div> : <p className="mt-3 text-xs text-[var(--muted)]">可先直接拆解任务，或在新增里程碑时同时创建并关联第一项任务。</p>}
           </section>
         </article>;
