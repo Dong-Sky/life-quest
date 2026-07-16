@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LinkedQuestPanel } from "@/components/linked-quest-panel";
 import { useState } from "react";
 import { createPrototypeMainline, initialPrototypeState, readPrototypeState, type PrototypeMainline, type PrototypeState, updatePrototypeMainline, writePrototypeState } from "@/src/prototype/state";
 
@@ -48,6 +49,7 @@ export default function MainlinesPage() {
       return <article className="rounded-xl border border-[var(--line)] bg-white p-5" key={mainline.id}>
         <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="font-semibold">{mainline.name}</p>{mainline.vision ? <p className="mt-2 text-sm text-[var(--muted)]">{mainline.vision}</p> : <p className="mt-2 text-sm text-[var(--muted)]">尚未写下愿景。</p>}</div><div className="flex items-center gap-2"><div className="rounded-lg bg-[var(--accent-soft)] px-3 py-2 text-xs text-[var(--accent)]"><strong>{openCount}</strong> 个待推进 · {completedCount} 个已完成</div><button className="rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs hover:bg-gray-50" onClick={() => startEdit(mainline)} type="button">编辑</button></div></div>
         {isEditing ? <div className="mt-5 grid gap-3 border-t border-[var(--line)] pt-4 sm:grid-cols-2"><label className="grid gap-1.5 text-xs text-[var(--muted)]"><span>主线名称</span><input className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm text-[var(--ink)]" onChange={(event) => setEditName(event.target.value)} value={editName} /></label><label className="grid gap-1.5 text-xs text-[var(--muted)]"><span>一句愿景（可选）</span><input className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm text-[var(--ink)]" onChange={(event) => setEditVision(event.target.value)} value={editVision} /></label><div className="flex gap-2 sm:col-span-2"><button className="rounded-md bg-[var(--ink)] px-3 py-2 text-xs font-medium text-white" onClick={saveEdit} type="button">保存修改</button><button className="rounded-md border border-[var(--line)] px-3 py-2 text-xs" onClick={() => setEditingId(null)} type="button">取消</button></div></div> : null}
+        <LinkedQuestPanel state={state} onStateChange={save} mainlineId={mainline.id} />
       </article>;
     }) : <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-8 text-center"><p className="font-medium">先创建第一条主线。</p><p className="mt-2 text-sm text-[var(--muted)]">它可以是健康、职业、关系、学习，或任何你真正想长期推进的方向。</p><Link className="mt-4 inline-block text-sm font-medium text-[var(--accent)]" href="/quests">暂时只管理任务也可以 →</Link></div>}</section>
   </div>;
