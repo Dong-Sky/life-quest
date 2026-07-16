@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getCycleKey } from "./recurrence";
-import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, createPrototypeWeeklyPlan, getPrototypeMilestoneProgress, getPrototypeQuestDeadlines, getPrototypeWeeklyReviewSummary, getPrototypeWeeklyRhythm, hydratePrototypeState, redeemPrototypeReward, settlePrototypeQuest, togglePrototypeRewardWishlist, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
+import { createPrototypeMilestone, createPrototypeProject, createPrototypeReward, createPrototypeWeeklyPlan, getPrototypeMilestoneProgress, getPrototypeProjectProgress, getPrototypeQuestDeadlines, getPrototypeWeeklyReviewSummary, getPrototypeWeeklyRhythm, hydratePrototypeState, redeemPrototypeReward, settlePrototypeQuest, togglePrototypeRewardWishlist, updatePrototypeMilestone, updatePrototypeProject, updatePrototypeQuest, type PrototypeState } from "./state";
 
 function stateWithRecurringQuest(targetCount: number): PrototypeState {
   const cadence = targetCount === 1 ? "daily" : "weekly";
@@ -252,5 +252,39 @@ describe("task deadline reminders", () => {
     });
 
     expect(updated.quests[0].dueDate).toBeUndefined();
+  });
+});
+
+
+describe("weighted task progress", () => {
+  it("uses planned XP weights instead of simple task counts", () => {
+    const base = stateWithRecurringQuest(1);
+    const state: PrototypeState = {
+      ...base,
+      projects: [{
+        id: "project-1",
+        name: "旅行计划",
+        victoryCondition: "",
+        status: "active",
+        createdAt: "2026-07-16T00:00:00.000Z",
+      }],
+      milestones: [{
+        id: "milestone-1",
+        projectId: "project-1",
+        title: "行前准备",
+        questIds: ["simple", "important"],
+        createdAt: "2026-07-16T00:00:00.000Z",
+      }],
+      quests: [
+        { ...base.quests[0], id: "simple", recurrence: undefined, projectId: "project-1", questType: "standard", difficulty: "standard", importance: "helpful", resistance: "none", status: "completed" },
+        { ...base.quests[0], id: "important", recurrence: undefined, projectId: "project-1", questType: "focus", difficulty: "hard", importance: "goal", resistance: "procrastinated", status: "open" },
+      ],
+    };
+
+    const project = getPrototypeProjectProgress(state, "project-1");
+    const milestone = getPrototypeMilestoneProgress(state, state.milestones[0]);
+
+    expect(project).toMatchObject({ total: 2, completed: 1, plannedXp: 54, completedXp: 10, percent: 19 });
+    expect(milestone).toMatchObject({ plannedXp: 54, completedXp: 10, percent: 19, isCompleted: false });
   });
 });
