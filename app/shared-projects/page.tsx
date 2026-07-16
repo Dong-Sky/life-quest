@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/client";
+import { recordPrototypeSharedQuestSettlement, readPrototypeState, writePrototypeState } from "@/src/prototype/state";
 
 type Partner = {
   friend_id: string;
@@ -220,6 +221,9 @@ export default function SharedProjectsPage() {
   const completeTask = async (taskId: string) => {
     setError("");
     setNotice("");
+    const task = projects.flatMap((project) => project.tasks).find((item) => item.id === taskId);
+    if (!task) return;
+
     const supabase = createSupabaseBrowserClient();
     const { data, error: completeError } = await supabase.rpc("complete_shared_project_task", {
       target_task_id: taskId,
@@ -231,7 +235,22 @@ export default function SharedProjectsPage() {
     }
 
     const awarded = data as { xp?: number; coins?: number } | null;
-    setNotice(`共同任务已完成，并同步给所有参与者。你获得了 +${awarded?.xp ?? 0} XP · +${awarded?.coins ?? 0} 金币。`);
+    const xp = awarded?.xp ?? 0;
+    const coins = awarded?.coins ?? 0;
+    const nextWorkspaceState = recordPrototypeSharedQuestSettlement(readPrototypeState(), {
+      sharedTaskId: task.id,
+      title: task.title,
+      questType: task.quest_type,
+      difficulty: task.difficulty,
+      importance: task.importance,
+      resistance: task.resistance,
+      xp,
+      coins,
+      completedAt: new Date().toISOString(),
+    });
+    writePrototypeState(nextWorkspaceState);
+
+    setNotice(`共同任务已完成，并同步给所有参与者。你获得了 +${xp} XP · +${coins} 金币。`);
     await load();
   };
 
