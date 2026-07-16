@@ -439,6 +439,43 @@ export function getPrototypeMilestoneProgress(state: PrototypeState, milestone: 
   return { total, completed, isCompleted: total > 0 && completed === total };
 }
 
+export function recordPrototypeSharedQuestSettlement(
+  state: PrototypeState,
+  draft: Pick<PrototypeQuest, "title" | "questType" | "difficulty" | "importance" | "resistance"> & { sharedTaskId: string; xp: number; coins: number; completedAt?: string },
+): PrototypeState {
+  const questId = `shared:${draft.sharedTaskId}`;
+  if (state.quests.some((quest) => quest.id === questId)) return state;
+
+  const completedAt = draft.completedAt ?? new Date().toISOString();
+  const calculatedReward = calculateQuestReward(draft);
+  const reward = { ...calculatedReward, xp: draft.xp, coins: draft.coins };
+
+  return {
+    ...state,
+    totalXp: state.totalXp + draft.xp,
+    coinBalance: state.coinBalance + draft.coins,
+    transactions: [{
+      id: crypto.randomUUID(),
+      questId,
+      xpDelta: draft.xp,
+      coinDelta: draft.coins,
+      calculationVersion: reward.calculationVersion,
+      createdAt: completedAt,
+    }, ...state.transactions],
+    quests: [{
+      id: questId,
+      title: `共同副本 · ${draft.title}`,
+      questType: draft.questType,
+      difficulty: draft.difficulty,
+      importance: draft.importance,
+      resistance: draft.resistance,
+      status: "completed",
+      reward,
+      completedAt,
+    }, ...state.quests],
+  };
+}
+
 export function createPrototypeReward(state: PrototypeState, draft: PrototypeRewardDraft): PrototypeState {
   const name = draft.name.trim();
   const coinCost = Math.floor(draft.coinCost);
