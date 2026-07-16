@@ -23,15 +23,17 @@ export function LinkedQuestPanel({ state, onStateChange, mainlineId, projectId }
   const [difficulty, setDifficulty] = useState<Difficulty>("standard");
   const [importance, setImportance] = useState<Importance>("helpful");
   const [resistance, setResistance] = useState<Resistance>("none");
+  const [dueDate, setDueDate] = useState("");
   const quests = state.quests.filter((quest) => projectId ? quest.projectId === projectId : quest.mainlineId === mainlineId && !quest.projectId);
   const openCount = quests.filter((quest) => quest.status === "open").length;
 
   const create = () => {
-    const next = createPrototypeQuest(state, { title, questType, difficulty, importance, resistance, mainlineId, projectId });
+    const next = createPrototypeQuest(state, { title, questType, difficulty, importance, resistance, mainlineId, projectId, dueDate: dueDate || undefined });
 
     if (next !== state) {
       onStateChange(next);
       setTitle("");
+      setDueDate("");
     }
   };
 
@@ -42,11 +44,11 @@ export function LinkedQuestPanel({ state, onStateChange, mainlineId, projectId }
     </div>
     <form className="mt-3" onSubmit={(event) => { event.preventDefault(); create(); }}>
       <div className="flex gap-2"><input className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" onChange={(event) => setTitle(event.target.value)} placeholder="例如：预订酒店" value={title} /><button className="shrink-0 rounded-lg bg-[var(--ink)] px-3 py-2 text-sm font-medium text-white" type="submit">添加任务</button></div>
-      <details className="mt-2 rounded-lg border border-[var(--line)] bg-[#fafafa] px-3 py-2"><summary className="cursor-pointer text-xs font-medium text-[var(--muted)]">设置任务属性（可选）</summary><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4"><TaskSelect label="任务类型" options={options.questType} onChange={(value) => setQuestType(value as QuestType)} value={questType} /><TaskSelect label="难度" options={options.difficulty} onChange={(value) => setDifficulty(value as Difficulty)} value={difficulty} /><TaskSelect label="重要度" options={options.importance} onChange={(value) => setImportance(value as Importance)} value={importance} /><TaskSelect label="心理阻力" options={options.resistance} onChange={(value) => setResistance(value as Resistance)} value={resistance} /></div></details>
+      <details className="mt-2 rounded-lg border border-[var(--line)] bg-[#fafafa] px-3 py-2"><summary className="cursor-pointer text-xs font-medium text-[var(--muted)]">设置任务属性（可选）</summary><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4"><TaskSelect label="任务类型" options={options.questType} onChange={(value) => setQuestType(value as QuestType)} value={questType} /><TaskSelect label="难度" options={options.difficulty} onChange={(value) => setDifficulty(value as Difficulty)} value={difficulty} /><TaskSelect label="重要度" options={options.importance} onChange={(value) => setImportance(value as Importance)} value={importance} /><TaskSelect label="心理阻力" options={options.resistance} onChange={(value) => setResistance(value as Resistance)} value={resistance} /></div><label className="mt-3 grid max-w-xs gap-1 text-xs text-[var(--muted)]"><span>DDL（可选）</span><input className="rounded-md border border-[var(--line)] bg-white px-2 py-1.5 text-sm text-[var(--ink)]" onChange={(event) => setDueDate(event.target.value)} type="date" value={dueDate} /></label></details>
     </form>
     {quests.length ? <div className="mt-3 divide-y divide-[var(--line)] rounded-lg border border-[var(--line)] bg-white">
       {quests.map((quest) => <div className="flex items-center justify-between gap-3 px-3 py-2.5" key={quest.id}>
-        <div><p className={quest.status === "completed" ? "text-sm text-[var(--muted)] line-through" : "text-sm"}>{quest.title}</p><p className="mt-0.5 text-xs text-[var(--muted)]">{quest.questType} · {quest.difficulty}</p></div>
+        <div><p className={quest.status === "completed" ? "text-sm text-[var(--muted)] line-through" : "text-sm"}>{quest.title}</p><p className="mt-0.5 text-xs text-[var(--muted)]">{quest.questType} · {quest.difficulty}{quest.dueDate ? ` · DDL：${quest.dueDate}` : ""}</p></div>
         {quest.status === "completed" ? <span className="shrink-0 text-xs text-[var(--success)]">已结算 +{quest.reward?.xp ?? 0} XP</span> : <button className="shrink-0 rounded-md border border-[var(--line)] px-2.5 py-1.5 text-xs hover:bg-gray-50" onClick={() => onStateChange(settlePrototypeQuest(state, quest.id))} type="button">完成</button>}
       </div>)}
     </div> : <p className="mt-3 text-xs text-[var(--muted)]">还没有直接拆解的任务。</p>}
