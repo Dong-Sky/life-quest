@@ -35,7 +35,18 @@ export interface PrototypeMilestone {
 export interface PrototypeMilestoneProgress {
   total: number;
   completed: number;
+  plannedXp: number;
+  completedXp: number;
+  percent: number;
   isCompleted: boolean;
+}
+
+export interface PrototypeWeightedProgress {
+  total: number;
+  completed: number;
+  plannedXp: number;
+  completedXp: number;
+  percent: number;
 }
 
 export interface PrototypeReward {
@@ -163,6 +174,31 @@ export function getPrototypeQuestDeadlines(state: PrototypeState, now = new Date
     })
     .filter((item) => item.daysUntil <= withinDays)
     .sort((left, right) => left.daysUntil - right.daysUntil || left.quest.title.localeCompare(right.quest.title));
+}
+
+export function getPrototypeQuestPlannedXp(quest: Pick<PrototypeQuest, "questType" | "difficulty" | "importance" | "resistance">): number {
+  return calculateQuestReward(quest).xp;
+}
+
+export function getPrototypeWeightedProgress(quests: PrototypeQuest[]): PrototypeWeightedProgress {
+  const plannedXp = quests.reduce((total, quest) => total + getPrototypeQuestPlannedXp(quest), 0);
+  const completedXp = quests
+    .filter((quest) => quest.status === "completed")
+    .reduce((total, quest) => total + getPrototypeQuestPlannedXp(quest), 0);
+  const total = quests.length;
+  const completed = quests.filter((quest) => quest.status === "completed").length;
+
+  return {
+    total,
+    completed,
+    plannedXp,
+    completedXp,
+    percent: plannedXp ? Math.round((completedXp / plannedXp) * 100) : 0,
+  };
+}
+
+export function getPrototypeProjectProgress(state: PrototypeState, projectId: string): PrototypeWeightedProgress {
+  return getPrototypeWeightedProgress(state.quests.filter((quest) => quest.projectId === projectId));
 }
 
 export interface PrototypeTransaction {
@@ -466,9 +502,11 @@ export function updatePrototypeMilestone(state: PrototypeState, id: string, titl
 }
 
 export function getPrototypeMilestoneProgress(state: PrototypeState, milestone: PrototypeMilestone): PrototypeMilestoneProgress {
-  const total = milestone.questIds.length;
-  const completed = milestone.questIds.filter((questId) => state.quests.some((quest) => quest.id === questId && quest.status === "completed")).length;
-  return { total, completed, isCompleted: total > 0 && completed === total };
+  const quests = milestone.questIds
+    .map((questId) => state.quests.find((quest) => quest.id === questId))
+    .filter((quest): quest is PrototypeQuest => Boolean(quest));
+  const progress = getPrototypeWeightedProgress(quests);
+  return { ...progress, isCompleted: progress.total > 0 && progress.completed === progress.total };
 }
 
 export function recordPrototypeSharedQuestSettlement(
