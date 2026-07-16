@@ -153,7 +153,7 @@ export default function SharedProjectsPage() {
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">和搭档一起，推进一件有终点的事。</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">副本内的任何任务都可由参与者完成，进度会同步给所有人。第一版只同步进度，不影响各自的 XP、金币和周结算。</p>
       </div>
-      <Link className="rounded-lg border border-[var(--line)] bg-white px-3.5 py-2 text-sm font-medium hover:bg-gray-50" href="/projects">个人副本</Link>
+      <div className="flex rounded-lg border border-[var(--line)] bg-white p-1 text-sm"><Link className="rounded-md px-3 py-1.5 text-[var(--muted)] hover:bg-gray-50 hover:text-[var(--ink)]" href="/projects">个人副本</Link><Link className="rounded-md bg-[var(--accent-soft)] px-3 py-1.5 font-medium text-[var(--accent)]" href="/shared-projects">共同副本</Link></div>
     </header>
 
     {notice ? <p className="mt-5 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{notice}</p> : null}
