@@ -20,6 +20,7 @@ export default function ReviewsPage() {
   const [state, setState] = useState<PrototypeState>(() => typeof window === "undefined" ? initialPrototypeState() : readPrototypeState());
   const [priorities, setPriorities] = useState<PrototypeWeeklyPlanQuestDraft[]>([blankPriority(), blankPriority(), blankPriority()]);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [showAllSettlements, setShowAllSettlements] = useState(false);
   const currentDate = new Date();
   const selectedDate = new Date(currentDate);
   selectedDate.setDate(selectedDate.getDate() + weekOffset * 7);
@@ -28,6 +29,7 @@ export default function ReviewsPage() {
   const summary = getPrototypeWeeklyReviewSummary(state, selectedDate);
   const plan = isCurrentWeek ? state.weeklyPlans.find((item) => item.sourceWeekKey === selectedWeekKey) : undefined;
   const settledQuests = state.quests.filter((quest) => quest.completedAt && getPrototypeWeekKey(new Date(quest.completedAt)) === selectedWeekKey);
+  const visibleSettledQuests = showAllSettlements ? settledQuests : settledQuests.slice(0, 4);
   const redeemedThisWeek = state.redemptions.filter((redemption) => getPrototypeWeekKey(new Date(redemption.redeemedAt)) === selectedWeekKey);
   const plannedQuests = plan ? plan.questIds.map((questId) => state.quests.find((quest) => quest.id === questId)).filter(Boolean) : [];
   const wishlist = [...state.rewards].filter((reward) => reward.isWishlisted).sort((a, b) => (b.wishlistedAt ?? "").localeCompare(a.wishlistedAt ?? ""));
@@ -55,7 +57,7 @@ export default function ReviewsPage() {
     <div className="mt-7 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
       <section className="rounded-xl border border-[var(--line)] bg-white p-5">
         <div><h2 className="text-base font-semibold">本周战报</h2><p className="mt-1 text-xs text-[var(--muted)]">{formatWeekRange(selectedDate)} 的真实任务结算。</p></div>
-        {settledQuests.length ? <div className="mt-5 divide-y divide-[var(--line)]">{settledQuests.map((quest) => <article className="flex items-center justify-between gap-3 py-3" key={quest.id}><div className="min-w-0"><p className="truncate text-sm font-medium">{quest.title}</p><p className="mt-1 text-xs text-[var(--muted)]">已完成结算</p></div><p className="shrink-0 text-sm text-[var(--muted)]">+{quest.reward?.xp ?? 0} XP · +{quest.reward?.coins ?? 0} coins</p></article>)}</div> : <p className="mt-5 rounded-lg bg-[var(--surface)] px-4 py-5 text-sm leading-6 text-[var(--muted)]">这一周还没有结算任务。</p>}
+        {settledQuests.length ? <><div className="mt-5 divide-y divide-[var(--line)]">{visibleSettledQuests.map((quest) => <article className="flex items-center justify-between gap-3 py-3" key={quest.id}><div className="min-w-0"><p className="truncate text-sm font-medium">{quest.title}</p><p className="mt-1 text-xs text-[var(--muted)]">已完成结算</p></div><p className="shrink-0 text-sm text-[var(--muted)]">+{quest.reward?.xp ?? 0} XP · +{quest.reward?.coins ?? 0} coins</p></article>)}</div>{settledQuests.length > 4 ? <button aria-expanded={showAllSettlements} className="mt-4 text-sm font-medium text-[var(--accent)] hover:underline" onClick={() => setShowAllSettlements((current) => !current)} type="button">{showAllSettlements ? "收起其余结算" : "展开剩余 " + (settledQuests.length - 4) + " 条结算"}</button> : null}</> : <p className="mt-5 rounded-lg bg-[var(--surface)] px-4 py-5 text-sm leading-6 text-[var(--muted)]">这一周还没有结算任务。</p>}
         <div className="mt-6 border-t border-[var(--line)] pt-5"><h3 className="text-sm font-semibold">本周已兑换奖励</h3>{redeemedThisWeek.length ? <div className="mt-3 space-y-2">{redeemedThisWeek.map((redemption) => <div className="flex items-center justify-between rounded-lg bg-[var(--surface)] px-3 py-2.5 text-sm" key={redemption.id}><span>{redemption.rewardName}</span><span className="text-[var(--success)]">−{redemption.coinCost} coins</span></div>)}</div> : <p className="mt-2 text-sm text-[var(--muted)]">这一周还没有兑换奖励。</p>}</div>
       </section>
 
