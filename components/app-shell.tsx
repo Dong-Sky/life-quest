@@ -54,9 +54,9 @@ export function AppShell({ children, accountName, onSignOut, onResetWorkspace }:
     };
   }, []);
 
-  return <div className="min-h-screen bg-[var(--canvas)] lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
-    <aside className="border-b border-[var(--line)] bg-white px-4 py-3 lg:min-h-screen lg:border-b-0 lg:border-r lg:px-4 lg:py-4">
-      <div className="flex items-center gap-3 px-1 lg:px-2 lg:pb-7 lg:pt-1">
+  return <div className="min-h-screen bg-[var(--canvas)] lg:grid lg:grid-cols-[232px_minmax(0,1fr)]">
+    <aside className="border-b border-[var(--line)] bg-white/90 px-4 py-3 backdrop-blur lg:min-h-screen lg:border-b-0 lg:border-r lg:px-4 lg:py-5">
+      <div className="flex items-center gap-3 px-1 lg:px-2 lg:pb-8 lg:pt-1">
         <BrandMark />
         <div><p className="text-[15px] font-semibold tracking-tight">Questline</p><p className="mt-0.5 text-xs text-[var(--muted)]">人生工作台</p></div>
         {accountName ? <p className="ml-auto max-w-[9rem] truncate text-xs text-[var(--muted)] lg:hidden" title={accountName}>{accountName}</p> : null}
@@ -69,10 +69,10 @@ export function AppShell({ children, accountName, onSignOut, onResetWorkspace }:
 
       <div className="hidden lg:block"><WeeklyRhythmCard /></div>
 
-      {accountName ? <div className="mt-5 hidden rounded-xl border border-[var(--line)] bg-[#fbfbfb] p-3 lg:block"><p className="truncate text-xs text-[var(--muted)]" title={accountName}>当前用户：{accountName}</p><div className="mt-2 flex items-center gap-3">{onSignOut ? <button className="text-xs font-medium text-[var(--muted)] transition hover:text-[var(--ink)]" onClick={onSignOut} type="button">退出登录</button> : null}{onResetWorkspace ? <button className="text-xs font-medium text-[var(--muted)] underline-offset-2 transition hover:text-red-600 hover:underline" onClick={onResetWorkspace} type="button">重新开始工作台</button> : null}</div></div> : null}
+      {accountName ? <div className="mt-5 hidden rounded-2xl border border-[var(--line)] bg-[#f8fbff] p-3.5 lg:block"><p className="truncate text-xs text-[var(--muted)]" title={accountName}>当前用户：{accountName}</p><div className="mt-2 flex items-center gap-3">{onSignOut ? <button className="text-xs font-medium text-[var(--muted)] transition hover:text-[var(--ink)]" onClick={onSignOut} type="button">退出登录</button> : null}{onResetWorkspace ? <button className="text-xs font-medium text-[var(--muted)] underline-offset-2 transition hover:text-red-600 hover:underline" onClick={onResetWorkspace} type="button">重新开始工作台</button> : null}</div></div> : null}
     </aside>
     <main className="min-w-0 pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</main>
-    <nav aria-label="手机主导航" className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--line)] bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-8px_24px_rgba(31,35,40,0.05)] backdrop-blur lg:hidden">
+    <nav aria-label="手机主导航" className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--line)] bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden">
       <div className="grid grid-cols-7">{navigation.map((item) => {
         const active = pathname === item.href;
         const pendingCount = item.icon === "friends" ? pendingFriendCount : 0;
@@ -86,7 +86,7 @@ export function AppShell({ children, accountName, onSignOut, onResetWorkspace }:
 }
 
 function NavigationLink({ item, active, pendingCount }: { item: (typeof navigation)[number]; active: boolean; pendingCount: number }) {
-  return <Link aria-current={active ? "page" : undefined} className={`group flex min-w-fit items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-[var(--accent-soft)] font-medium text-[var(--accent)] shadow-[inset_3px_0_0_var(--accent)]" : "text-[var(--muted)] hover:bg-[#f7f7f8] hover:text-[var(--ink)]"}`} href={item.href}>
+  return <Link aria-current={active ? "page" : undefined} className={`group flex min-w-fit items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-[var(--accent-soft)] font-semibold text-[var(--accent)] shadow-[inset_3px_0_0_var(--accent)]" : "text-[var(--muted)] hover:bg-[#f7f9fc] hover:text-[var(--ink)]"}`} href={item.href}>
     <span className="relative"><NavigationIcon name={item.icon} />{pendingCount ? <PendingBadge count={pendingCount} /> : null}</span>
     <span>{item.label}</span>
   </Link>;
@@ -97,7 +97,7 @@ function PendingBadge({ count }: { count: number }) {
 }
 
 function BrandMark() {
-  return <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--ink)] shadow-sm"><svg aria-hidden="true" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><path d="M6 5.5h5.5a3 3 0 0 1 3 3V18H9a3 3 0 0 0-3 3V5.5Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /><path d="M14.5 18H18V9a3 3 0 0 0-3-3h-.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /><path d="m10 11 1.3 1.3L14 9.6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /></svg></div>;
+  return <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--ink)] shadow-[0_8px_20px_rgba(15,23,42,0.14)]"><svg aria-hidden="true" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><path d="M6 5.5h5.5a3 3 0 0 1 3 3V18H9a3 3 0 0 0-3 3V5.5Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /><path d="M14.5 18H18V9a3 3 0 0 0-3-3h-.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /><path d="m10 11 1.3 1.3L14 9.6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /></svg></div>;
 }
 
 function NavigationIcon({ name }: { name: NavigationIconName }) {
