@@ -280,6 +280,40 @@ export default function SharedProjectsPage() {
     await load();
   };
 
+  const reopenProject = async (projectId: string) => {
+    setError("");
+    setNotice("");
+    const supabase = createSupabaseBrowserClient();
+    const { error: reopenError } = await supabase.rpc("reopen_shared_project", {
+      target_project_id: projectId,
+    });
+
+    if (reopenError) {
+      setError(reopenError.message);
+      return;
+    }
+
+    setNotice("共同副本已恢复为推进中，可以继续补充任务和里程碑。");
+    await load();
+  };
+
+  const completeProject = async (projectId: string) => {
+    setError("");
+    setNotice("");
+    const supabase = createSupabaseBrowserClient();
+    const { error: completeError } = await supabase.rpc("complete_shared_project", {
+      target_project_id: projectId,
+    });
+
+    if (completeError) {
+      setError(completeError.message);
+      return;
+    }
+
+    setNotice("共同副本已完成。之后如需补充计划，可以选择“继续规划”。");
+    await load();
+  };
+
   const beginMilestone = (projectId: string) => {
     setMilestoneProjectId(projectId);
     setMilestoneTitle("");
@@ -365,6 +399,8 @@ export default function SharedProjectsPage() {
           </div>
 
           <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-gray-100"><div className="h-full rounded-full bg-[var(--success)]" style={{ width: `${percent}%` }} /></div>
+
+          {isCompleted ? <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2"><p className="text-xs text-green-800">这个副本已由参与者主动结束。需要补充计划时可重新开启。</p><button className="shrink-0 rounded-md border border-green-300 bg-white px-2.5 py-1.5 text-xs text-green-800 hover:bg-green-100" onClick={() => void reopenProject(project.id)} type="button">继续规划</button></div> : total > 0 && completed === total ? <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-[var(--line)] bg-[#fafafa] px-3 py-2"><p className="text-xs text-[var(--muted)]">当前任务都已完成；如确认这件事已结束，可手动完成副本。</p><button className="shrink-0 rounded-md bg-[var(--ink)] px-2.5 py-1.5 text-xs text-white" onClick={() => void completeProject(project.id)} type="button">完成副本</button></div> : null}
 
           <section className="mt-5">
             <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-medium">直接拆解任务</p><p className="mt-1 text-xs text-[var(--muted)]">先把要做的事逐条写下；需要时再展开设置任务属性。</p></div></div>
