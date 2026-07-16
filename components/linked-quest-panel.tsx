@@ -39,7 +39,7 @@ export function LinkedQuestPanel({ state, onStateChange, mainlineId, projectId }
 
   return <section className="mt-5 border-t border-[var(--line)] pt-4">
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div><p className="text-sm font-medium">直接拆解任务</p><p className="mt-1 text-xs text-[var(--muted)]">先把要做的事逐条写下；需要时再展开设置任务属性。</p></div>
+      <div><p className="text-sm font-medium">任务 · 未编入阶段的直接行动</p><p className="mt-1 text-xs text-[var(--muted)]">{projectId ? "这些行动属于当前副本，但暂未归入一个阶段里程碑。" : "这些行动连接到当前主线，但还没有归入某个副本。"} 需要时再展开设置任务属性。</p></div>
       <Link className="shrink-0 text-xs font-medium text-[var(--accent)] hover:underline" href="/quests">管理全部任务 →</Link>
     </div>
     <form className="mt-3" onSubmit={(event) => { event.preventDefault(); create(); }}>
