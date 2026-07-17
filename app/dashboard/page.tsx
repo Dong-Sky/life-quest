@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { calculateLevelProgress } from "@/src/domain/rewards/calculate-level";
 import { calculateQuestReward } from "@/src/domain/rewards/calculate-quest-reward";
-import { getPrototypeProjectProgress, getPrototypeQuestDeadlines, getPrototypeWeeklyReviewSummary, initialPrototypeState, readPrototypeState, settlePrototypeQuest, type PrototypeQuest, type PrototypeQuestDeadline, type PrototypeState, writePrototypeState } from "@/src/prototype/state";
+import { getPrototypeProjectProgress, getPrototypeQuestDeadlines, getPrototypeWeeklyReviewSummary, initialPrototypeState, readPrototypeState, settlePrototypeQuest, type PrototypeQuest, type PrototypeQuestDeadline, type PrototypeState, type PrototypeTransaction, writePrototypeState } from "@/src/prototype/state";
 
 export default function DashboardPage() {
   const [state, setState] = useState<PrototypeState>(() => typeof window === "undefined" ? initialPrototypeState() : readPrototypeState());
@@ -15,6 +15,7 @@ export default function DashboardPage() {
   });
   const level = calculateLevelProgress(state.totalXp);
   const weekly = getPrototypeWeeklyReviewSummary(state);
+  const weeklyTrend = getWeeklyTrend(state.transactions);
   const deadlines = getPrototypeQuestDeadlines(state);
   const deadlineOrder = new Map(deadlines.map((item, index) => [item.quest.id, index]));
   const open = state.quests
@@ -26,27 +27,29 @@ export default function DashboardPage() {
   return <div className="mx-auto max-w-7xl px-5 py-7 sm:px-8 lg:py-9">
     <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--line)] pb-6">
       <div><p className="text-sm font-medium text-[var(--accent)]">今日工作台</p><h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-[32px]">今天，推进一件重要的事。</h1><p className="mt-2 text-sm text-[var(--muted)]">专注当下，积累复利，未来可期。</p></div>
-      <div className="flex flex-wrap items-center justify-end gap-3"><p className="text-sm text-[var(--muted)]">{dateLabel}</p><Link className="rounded-xl bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.22)] transition hover:bg-blue-700" href="/quests">+ 新建任务</Link></div>
+      <div className="flex flex-wrap items-center justify-end gap-3"><p className="text-sm text-[var(--muted)]">{dateLabel}</p><Link className="rounded-xl bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white shadow-none transition hover:bg-blue-700" href="/quests">+ 新建任务</Link></div>
     </header>
 
-    <section className="mt-6 grid gap-3 md:grid-cols-3">
-      <StatCard label="当前等级" value={<>Lv. {level.level}</>} detail="稳定积累，每一次结算都算数" accent="blue" />
-      <StatCard label="距下一等级" value={Math.max(level.nextLevelXp - state.totalXp, 0) + " XP"} detail={state.totalXp + " / " + level.nextLevelXp + " XP"} accent="blue" progress={level.progress * 100} />
-      <StatCard label="金币余额" value={state.coinBalance + " coins"} detail="用努力换取真正想要的奖励" accent="gold" />
+    <section className="mt-6 rounded-2xl border border-[var(--line)] bg-white p-4 sm:p-5">
+      <div className="grid gap-3 md:grid-cols-3">
+        <StatCard label="当前等级" value={<>Lv. {level.level}</>} detail="稳定积累，每一次结算都算数" accent="blue" />
+        <StatCard label="距下一等级" value={Math.max(level.nextLevelXp - state.totalXp, 0) + " XP"} detail={state.totalXp + " / " + level.nextLevelXp + " XP"} accent="blue" progress={level.progress * 100} />
+        <StatCard label="金币余额" value={state.coinBalance + " coins"} detail="用努力换取真正想要的奖励" accent="gold" />
+      </div>
     </section>
 
     {deadlines.length ? <section className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-sm font-semibold">临近 DDL</h2><p className="mt-1 text-xs text-[var(--muted)]">优先处理逾期、今天到期和未来三天到期的任务。</p></div><Link className="text-xs font-semibold text-[var(--accent)] hover:underline" href="/quests">管理任务 →</Link></div><div className="mt-3 grid gap-2 lg:grid-cols-2">{deadlines.slice(0, 4).map((item) => <DeadlineTask key={item.quest.id} deadline={item} onComplete={complete} />)}</div></section> : null}
 
     <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
-      <section className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.035)] sm:p-5">
+      <section className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-none sm:p-5">
         <div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold">今日三件事</h2><p className="mt-1 text-xs text-[var(--muted)]">聚焦最重要的三项行动，完成即为胜利。</p></div><Link className="text-xs font-semibold text-[var(--accent)] hover:underline" href="/quests">查看全部</Link></div>
         <div className="mt-4 space-y-2">{open.length ? open.map((quest, index) => <TodayQuest key={quest.id} index={index + 1} quest={quest} state={state} onComplete={complete} />) : <EmptyState text="今天的任务已全部完成。去为下一步留下一件具体行动吧。" href="/quests" action="创建任务" />}</div>
         {open.length ? <Link className="mt-4 inline-flex text-sm font-semibold text-[var(--accent)] hover:underline" href="/quests">+ 添加任务</Link> : null}
       </section>
 
       <aside className="grid gap-5">
-        <section className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.035)] sm:p-5"><div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold">最近结算</h2><p className="mt-1 text-xs text-[var(--muted)]">每次完成，都在为自己累积筹码。</p></div><Link className="text-xs font-semibold text-[var(--accent)] hover:underline" href="/reviews">查看全部</Link></div><div className="mt-4 space-y-2">{state.transactions.length ? state.transactions.slice(0, 3).map((transaction) => { const quest = state.quests.find((item) => item.id === transaction.questId); return <article className="flex items-center justify-between gap-3 rounded-xl bg-[#f8fbff] px-3 py-3" key={transaction.id}><p className="min-w-0 truncate text-sm font-medium">{quest?.title ?? "已结算任务"}</p><p className="shrink-0 text-xs font-semibold text-[var(--success)]">+{transaction.xpDelta} XP · +{transaction.coinDelta}</p></article>; }) : <p className="rounded-xl border border-dashed border-[var(--line)] p-4 text-sm text-[var(--muted)]">完成一项任务后，会在这里留下结算记录。</p>}</div></section>
-        <section className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.035)] sm:p-5"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">本周节奏</h2><Link className="text-xs font-semibold text-[var(--accent)] hover:underline" href="/reviews">查看结算</Link></div><div className="mt-4 grid grid-cols-2 gap-3"><MiniStat label="已结算" value={weekly.completedQuests + " 项"} /><MiniStat label="获得经验" value={weekly.xpEarned + " XP"} /></div><p className="mt-4 text-xs leading-5 text-[var(--muted)]">下一轮会在这里加入 XP 趋势、完成率与连续推进节奏。</p></section>
+        <section className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-none sm:p-5"><div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold">最近结算</h2><p className="mt-1 text-xs text-[var(--muted)]">每次完成，都在为自己累积筹码。</p></div><Link className="text-xs font-semibold text-[var(--accent)] hover:underline" href="/reviews">查看全部</Link></div><div className="mt-4 space-y-2">{state.transactions.length ? state.transactions.slice(0, 3).map((transaction) => { const quest = state.quests.find((item) => item.id === transaction.questId); return <article className="flex items-center justify-between gap-3 rounded-xl bg-[#f8fbff] px-3 py-3" key={transaction.id}><p className="min-w-0 truncate text-sm font-medium">{quest?.title ?? "已结算任务"}</p><p className="shrink-0 text-xs font-semibold text-[var(--success)]">+{transaction.xpDelta} XP · +{transaction.coinDelta}</p></article>; }) : <p className="rounded-xl border border-dashed border-[var(--line)] p-4 text-sm text-[var(--muted)]">完成一项任务后，会在这里留下结算记录。</p>}</div></section>
+        <WeeklyProgressCard completed={weekly.completedQuests} open={weekly.openQuests} trend={weeklyTrend} xp={weekly.xpEarned} />
       </aside>
     </div>
 
@@ -74,15 +77,46 @@ function DeadlineTask({ deadline, onComplete }: { deadline: PrototypeQuestDeadli
 }
 
 function FocusCollection({ title, href, linkText, empty, hasItems, children }: { title: string; href: string; linkText: string; empty: string; hasItems: boolean; children: ReactNode }) {
-  return <section className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.035)] sm:p-5"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">{title}</h2><Link className="text-xs font-semibold text-[var(--accent)] hover:underline" href={href}>{linkText} →</Link></div><div className="mt-4 grid gap-2">{hasItems ? children : <p className="rounded-xl border border-dashed border-[var(--line)] p-4 text-sm text-[var(--muted)]">{empty}</p>}</div></section>;
+  return <section className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-none sm:p-5"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">{title}</h2><Link className="text-xs font-semibold text-[var(--accent)] hover:underline" href={href}>{linkText} →</Link></div><div className="mt-4 grid gap-2">{hasItems ? children : <p className="rounded-xl border border-dashed border-[var(--line)] p-4 text-sm text-[var(--muted)]">{empty}</p>}</div></section>;
 }
 
 function StatCard({ label, value, detail, progress, accent }: { label: string; value: ReactNode; detail: string; progress?: number; accent: "blue" | "gold" }) {
-  return <article className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.035)] sm:p-5"><p className="text-sm text-[var(--muted)]">{label}</p><p className="mt-2 text-2xl font-bold tracking-tight">{value}</p><p className={"mt-2 text-xs " + (accent === "gold" ? "text-amber-600" : "text-[var(--muted)]")}>{detail}</p>{progress !== undefined ? <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-[var(--accent)]" style={{ width: Math.max(4, progress) + "%" }} /></div> : null}</article>;
+  return <article className="rounded-xl border border-[var(--line)] bg-[#f8fbff] p-4"><p className="text-sm text-[var(--muted)]">{label}</p><p className={"mt-2 text-2xl font-bold tracking-tight " + (accent === "gold" ? "text-amber-700" : "text-[var(--ink)]")}>{value}</p><p className={"mt-2 text-xs " + (accent === "gold" ? "text-amber-600" : "text-[var(--muted)]")}>{detail}</p>{progress !== undefined ? <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-[var(--accent)]" style={{ width: Math.min(100, Math.max(3, progress)) + "%" }} /></div> : null}</article>;
+}
+
+function WeeklyProgressCard({ completed, open, xp, trend }: { completed: number; open: number; xp: number; trend: WeeklyTrendDay[] }) {
+  const maxCompleted = Math.max(...trend.map((day) => day.completed), 1);
+  const hasTrend = trend.some((day) => day.completed > 0 || day.xp > 0);
+  const completionRate = completed + open > 0 ? Math.round((completed / (completed + open)) * 100) : undefined;
+
+  return <section className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-none sm:p-5">
+    <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">本周节奏</h2><Link className="text-xs font-semibold text-[var(--accent)] hover:underline" href="/reviews">查看结算</Link></div>
+    <div className="mt-4 grid grid-cols-2 gap-3"><MiniStat label="已完成任务" value={completed + " 项"} /><MiniStat label="获得经验" value={xp + " XP"} /></div>
+    {completionRate !== undefined ? <p className="mt-3 text-xs text-[var(--muted)]">本周任务完成率 {completionRate}% · 当前仍有 {open} 项待推进</p> : null}
+    {hasTrend ? <div className="mt-5"><div className="flex items-end gap-2 overflow-hidden" aria-label="最近 7 天每日完成任务数">{trend.map((day) => <div className="flex min-w-0 flex-1 flex-col items-center gap-2" key={day.key}><div className="flex h-20 w-full items-end rounded-lg bg-[#f8fbff] px-1.5 py-1.5"><div className="w-full rounded-md bg-[var(--accent)]" style={{ height: Math.max(8, (day.completed / maxCompleted) * 100) + "%" }} title={`${day.label} 完成 ${day.completed} 项，获得 ${day.xp} XP`} /></div><span className="text-[10px] text-[var(--muted)]">{day.label}</span></div>)}</div><p className="mt-3 text-xs text-[var(--muted)]">柱状高度表示每日完成任务数，悬停可查看当天 XP。</p></div> : <p className="mt-4 rounded-xl border border-dashed border-[var(--line)] p-4 text-sm leading-6 text-[var(--muted)]">最近 7 天还没有结算记录。完成一项任务后，这里会自动显示趋势。</p>}
+  </section>;
 }
 
 function MiniStat({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-xl bg-[#f8fbff] px-3 py-3"><p className="text-xs text-[var(--muted)]">{label}</p><p className="mt-1 text-lg font-bold">{value}</p></div>;
+  return <div className="rounded-xl border border-[var(--line)] bg-[#f8fbff] px-3 py-3"><p className="text-xs text-[var(--muted)]">{label}</p><p className="mt-1 text-lg font-bold">{value}</p></div>;
+}
+
+type WeeklyTrendDay = { key: string; label: string; completed: number; xp: number };
+
+function getWeeklyTrend(transactions: PrototypeTransaction[], now = new Date()): WeeklyTrendDay[] {
+  const formatter = new Intl.DateTimeFormat("zh-CN", { weekday: "short" });
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(now);
+    day.setHours(0, 0, 0, 0);
+    day.setDate(day.getDate() - (6 - index));
+    const nextDay = new Date(day);
+    nextDay.setDate(day.getDate() + 1);
+    const entries = transactions.filter((transaction) => {
+      const createdAt = new Date(transaction.createdAt);
+      return createdAt >= day && createdAt < nextDay;
+    });
+    return { key: day.toISOString(), label: formatter.format(day), completed: entries.length, xp: entries.reduce((total, transaction) => total + transaction.xpDelta, 0) };
+  });
 }
 
 function EmptyState({ text, href, action }: { text: string; href: string; action: string }) {

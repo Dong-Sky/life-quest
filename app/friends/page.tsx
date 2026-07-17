@@ -16,7 +16,7 @@ type FriendRecord = {
 export default function FriendsPage() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [inviteCode, setInviteCode] = useState("");
-  const [incoming, setIncoming] = useState("");
+  const [incoming, setIncoming] = useState(() => typeof window === "undefined" ? "" : new URL(window.location.href).searchParams.get("invite") ?? "");
   const [friends, setFriends] = useState<FriendRecord[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState("");
@@ -48,8 +48,8 @@ export default function FriendsPage() {
   }, [supabase]);
 
   useEffect(() => {
-    setIncoming(new URL(window.location.href).searchParams.get("invite") ?? "");
-    void load();
+    const timeout = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timeout);
   }, [load]);
 
   const shareUrl = inviteCode ? `${typeof window === "undefined" ? "" : window.location.origin}/friends?invite=${inviteCode}` : "";

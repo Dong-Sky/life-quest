@@ -18,7 +18,7 @@ export function WeeklyRhythmCard() {
 
   const rhythm = getPrototypeWeeklyRhythm(state);
 
-  return <section className="mt-8 hidden rounded-2xl border border-[var(--line)] bg-gradient-to-b from-white to-[#fafafa] p-4 lg:block">
+  return <section className="mt-8 hidden rounded-2xl border border-[var(--line)] bg-white p-4 lg:block">
     <div className="flex items-center justify-between gap-2"><p className="text-sm font-semibold">本周节奏</p><span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[10px] font-medium text-[var(--accent)]">进行中</span></div>
     <div className="mt-4 grid grid-cols-2 gap-2">
       <div className="rounded-lg bg-white p-2.5"><p className="text-[11px] text-[var(--muted)]">已结算</p><p className="mt-1 text-sm font-semibold">{rhythm.summary.completedQuests} 项</p></div>
